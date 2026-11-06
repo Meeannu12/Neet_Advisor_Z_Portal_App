@@ -9,4 +9,4 @@ import { UserDevice } from './entities/user-device.entity.js';
   providers: [UserDevicesService],
   exports: [UserDevicesModule],
 })
-export class UserDevicesModule { }
+export class UserDevicesModule { } 
