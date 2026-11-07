@@ -7,6 +7,8 @@ import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { SmsService } from '../../sms/sms.service.js';
 import { ContactRequestsService } from '../contact-requests/contact-requests.service.js';
 import { MailService } from '../../mail/mail.service.js';
+import { UserDevicesService } from '../user-devices/user-devices.service.js';
+import { DevicePlatform } from '../user-devices/entities/user-device.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -19,10 +21,11 @@ export class AuthService {
         private readonly smsService: SmsService,
         private readonly contactRequestsService: ContactRequestsService,
         private readonly mailService: MailService,
+        private readonly userDevicesService: UserDevicesService,
     ) { }
 
 
-    async verifyOtp(number: string, otp: string) {
+    async verifyOtp(number: string, otp: string, device: { deviceId: string, deviceName?: string, platform: DevicePlatform }) {
         const user = await this.userRepository.findOne({
             where: { number },
         });
@@ -43,6 +46,11 @@ export class AuthService {
             throw new UnauthorizedException(
                 'OTP expired or not found. Please request a new OTP.',
             );
+        }
+
+        // Validate stored hash before timingSafeEqual
+        if (!/^[a-f0-9]{64}$/i.test(storedHash)) {
+            throw new UnauthorizedException('Invalid OTP');
         }
 
         // Generate hash of entered OTP
@@ -80,6 +88,16 @@ export class AuthService {
             });
         }
 
+        // Register device only after OTP verification.
+        // If the user already has 3 active devices, this throws 403.
+        const registeredDevice =
+            await this.userDevicesService.registerDevice({
+                userId: user.id,
+                deviceId: device.deviceId,
+                deviceName: device.deviceName,
+                platform: device.platform,
+            });
+
         // OTP successfully verified
         await this.redisService.delete(otpKey);
         await this.redisService.delete(attemptsKey);
@@ -92,6 +110,12 @@ export class AuthService {
                 name: user.name,
                 number: user.number,
                 role: user.role,
+            },
+            device: {
+                id: registeredDevice.id,
+                deviceId: registeredDevice.deviceId,
+                deviceName: registeredDevice.deviceName,
+                platform: registeredDevice.platform,
             },
         };
     }

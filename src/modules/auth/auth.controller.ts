@@ -14,6 +14,10 @@ export class AuthController {
 
     @Post('verify-otp')
     async verifyOtp(@Body() dto: VerifyOtpDto) {
-        return this.authService.verifyOtp(dto.number, dto.otp)
+        return this.authService.verifyOtp(dto.number, dto.otp, {
+            deviceId: dto.deviceId,
+            deviceName: dto.deviceName,
+            platform: dto.platform,
+        })
     }
 }

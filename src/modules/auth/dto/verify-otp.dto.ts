@@ -1,7 +1,10 @@
 import {
+    IsIn,
     IsNotEmpty,
+    IsOptional,
     IsString,
     Matches,
+    MaxLength,
 } from 'class-validator';
 
 export class VerifyOtpDto {
@@ -17,4 +20,18 @@ export class VerifyOtpDto {
         message: 'OTP must be exactly 6 digits',
     })
     otp: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(150)
+    deviceId: string
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    deviceName?: string
+
+    @IsString()
+    @IsIn(['android', 'ios', 'web'])
+    platform: 'android' | 'ios' | 'web'
 }
