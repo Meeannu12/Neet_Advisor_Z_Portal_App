@@ -9,6 +9,7 @@ import { ContactRequestsModule } from '../contact-requests/contact-requests.modu
 import { UserDevicesModule } from '../user-devices/user-devices.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { JwtModule } from '@nestjs/jwt';
     UserDevicesModule
   ],
   controllers: [AuthController],
-  providers: [AuthService]
+  providers: [AuthService, JwtAuthGuard]
 })
 export class AuthModule { }
