@@ -9,6 +9,17 @@ import { ContactRequestsService } from '../contact-requests/contact-requests.ser
 import { MailService } from '../../mail/mail.service.js';
 import { UserDevicesService } from '../user-devices/user-devices.service.js';
 import { DevicePlatform } from '../user-devices/entities/user-device.entity.js';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+
+
+interface RefreshTokenPayload {
+    sub: string;
+    role: string;
+    deviceId: string;
+    tokenType: 'refresh';
+}
+
 
 @Injectable()
 export class AuthService {
@@ -22,6 +33,8 @@ export class AuthService {
         private readonly contactRequestsService: ContactRequestsService,
         private readonly mailService: MailService,
         private readonly userDevicesService: UserDevicesService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
     ) { }
 
 
@@ -98,6 +111,55 @@ export class AuthService {
                 platform: device.platform,
             });
 
+
+        // Generate access token
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                role: user.role,
+                deviceId: registeredDevice.deviceId,
+            },
+            {
+                secret: this.configService.getOrThrow<string>(
+                    'JWT_ACCESS_SECRET',
+                ),
+                expiresIn: '15m',
+            },
+        );
+
+        // Generate refresh token
+        const refreshToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                role: user.role,
+                deviceId: registeredDevice.deviceId,
+                tokenType: 'refresh',
+            },
+            {
+                secret: this.configService.getOrThrow<string>(
+                    'JWT_REFRESH_SECRET',
+                ),
+                expiresIn: '30d',
+            },
+        );
+
+
+        // Store only refresh token hash
+        const refreshTokenHash = createHash('sha256')
+            .update(refreshToken)
+            .digest('hex');
+
+        const refreshTokenExpiresAt = new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+        );
+
+        await this.userDevicesService.saveRefreshToken(
+            user.id,
+            registeredDevice.deviceId,
+            refreshTokenHash,
+            refreshTokenExpiresAt,
+        );
+
         // OTP successfully verified
         await this.redisService.delete(otpKey);
         await this.redisService.delete(attemptsKey);
@@ -116,6 +178,12 @@ export class AuthService {
                 deviceId: registeredDevice.deviceId,
                 deviceName: registeredDevice.deviceName,
                 platform: registeredDevice.platform,
+            },
+            tokens: {
+                accessToken,
+                refreshToken,
+                expiresIn: 900,
+                refreshExpiresIn: 2592000,
             },
         };
     }
@@ -202,5 +270,113 @@ export class AuthService {
             expiresIn: 300,
             resendAfter: 60,
         }
+    }
+
+
+    async refreshTokens(refreshToken: string) {
+        let payload: RefreshTokenPayload;
+
+        // 1. Verify refresh token
+        try {
+            payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+                refreshToken,
+                {
+                    secret: this.configService.getOrThrow<string>(
+                        'JWT_REFRESH_SECRET',
+                    ),
+                },
+            );
+        } catch {
+            throw new UnauthorizedException('Invalid or expired refresh token');
+        }
+
+        // 2. Check token type
+        if (
+            !payload.sub ||
+            !payload.deviceId ||
+            payload.tokenType !== 'refresh'
+        ) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        // 3. Check user
+        const user = await this.userRepository.findOne({
+            where: { id: payload.sub },
+        });
+
+        if (!user || !user.isActive) {
+            throw new UnauthorizedException('User not found or inactive');
+        }
+
+        // 4. Hash old refresh token
+        const oldTokenHash = createHash('sha256')
+            .update(refreshToken)
+            .digest('hex');
+
+        // 5. Generate new tokens
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                role: user.role,
+                deviceId: payload.deviceId,
+                tokenType: 'access',
+            },
+            {
+                secret: this.configService.getOrThrow<string>(
+                    'JWT_ACCESS_SECRET',
+                ),
+                expiresIn: '15m',
+            },
+        );
+
+        const newRefreshToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                role: user.role,
+                deviceId: payload.deviceId,
+                tokenType: 'refresh',
+            },
+            {
+                secret: this.configService.getOrThrow<string>(
+                    'JWT_REFRESH_SECRET',
+                ),
+                expiresIn: '30d',
+            },
+        );
+
+        const newTokenHash = createHash('sha256')
+            .update(newRefreshToken)
+            .digest('hex');
+
+        const expiresAt = new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+        );
+
+        // 6. Atomically rotate refresh token
+        const rotated = await this.userDevicesService.rotateRefreshToken(
+            user.id,
+            payload.deviceId,
+            oldTokenHash,
+            newTokenHash,
+            expiresAt,
+        );
+
+        if (!rotated) {
+            throw new UnauthorizedException(
+                'Refresh token is invalid, expired or device is inactive',
+            );
+        }
+
+        // 7. Return new tokens
+        return {
+            success: true,
+            message: 'Tokens refreshed successfully',
+            tokens: {
+                accessToken,
+                refreshToken: newRefreshToken,
+                expiresIn: 900,
+                refreshExpiresIn: 2592000,
+            },
+        };
     }
 }

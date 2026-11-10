@@ -7,9 +7,14 @@ import { SmsModule } from '../../sms/sms.module.js';
 import { MailModule } from '../../mail/mail.module.js';
 import { ContactRequestsModule } from '../contact-requests/contact-requests.module.js';
 import { UserDevicesModule } from '../user-devices/user-devices.module.js';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]),
+  imports: [
+    ConfigModule,
+    JwtModule.register({}),
+    TypeOrmModule.forFeature([User]),
     SmsModule,
     MailModule,
     ContactRequestsModule,

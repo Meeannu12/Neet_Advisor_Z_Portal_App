@@ -2,6 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { SendOtpDto } from './dto/send-otp.dto.js';
 import { VerifyOtpDto } from './dto/verify-otp.dto.js';
+import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 
 @Controller('auth')
 export class AuthController {
@@ -19,5 +20,10 @@ export class AuthController {
             deviceName: dto.deviceName,
             platform: dto.platform,
         })
+    }
+
+    @Post('refresh')
+    async refreshTokens(@Body() dto: RefreshTokenDto) {
+        return this.authService.refreshTokens(dto.refreshToken);
     }
 }

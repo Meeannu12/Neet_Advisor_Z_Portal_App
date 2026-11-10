@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DevicePlatform, UserDevice } from './entities/user-device.entity.js';
-import { DataSource } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import { User } from '../users/entities/user.entity.js';
 
 
@@ -87,5 +87,79 @@ export class UserDevicesService {
             return deviceRepository.save(device)
 
         })
+    }
+
+
+    async saveRefreshToken(
+        userId: string,
+        deviceId: string,
+        refreshTokenHash: string,
+        expiresAt: Date,
+    ): Promise<void> {
+        const result = await this.dataSource
+            .getRepository(UserDevice)
+            .update(
+                {
+                    userId,
+                    deviceId,
+                    isActive: true,
+                },
+                {
+                    refreshTokenHash,
+                    refreshTokenExpiresAt: expiresAt,
+                },
+            );
+
+        if (!result.affected) {
+            throw new NotFoundException('Active device not found');
+        }
+    }
+
+
+    async rotateRefreshToken(
+        userId: string,
+        deviceId: string,
+        oldTokenHash: string,
+        newTokenHash: string,
+        expiresAt: Date,
+    ): Promise<boolean> {
+        const result = await this.dataSource
+            .getRepository(UserDevice)
+            .update(
+                {
+                    userId,
+                    deviceId,
+                    isActive: true,
+                    refreshTokenHash: oldTokenHash,
+                    refreshTokenExpiresAt: MoreThan(new Date()),
+                },
+                {
+                    refreshTokenHash: newTokenHash,
+                    refreshTokenExpiresAt: expiresAt,
+                },
+            );
+
+        return (result.affected ?? 0) > 0;
+    }
+
+
+    async isDeviceActive(
+        userId: string,
+        deviceId: string,
+    ): Promise<boolean> {
+        const device = await this.dataSource
+            .getRepository(UserDevice)
+            .findOne({
+                where: {
+                    userId,
+                    deviceId,
+                    isActive: true,
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+        return !!device;
     }
 }

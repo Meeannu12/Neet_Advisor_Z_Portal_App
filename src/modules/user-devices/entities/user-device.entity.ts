@@ -41,9 +41,16 @@ export class UserDevice {
     @Column({ type: 'timestamp', nullable: true })
     lastLoginAt!: Date | null;
 
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    refreshTokenHash!: string | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    refreshTokenExpiresAt!: Date | null;
+
     @CreateDateColumn()
     createdAt!: Date;
 
     @UpdateDateColumn()
     updatedAt!: Date;
+
 }
