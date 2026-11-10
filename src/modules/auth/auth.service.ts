@@ -118,6 +118,7 @@ export class AuthService {
                 sub: user.id,
                 role: user.role,
                 deviceId: registeredDevice.deviceId,
+                tokenType: 'access', // Important
             },
             {
                 secret: this.configService.getOrThrow<string>(
@@ -378,5 +379,34 @@ export class AuthService {
                 refreshExpiresIn: 2592000,
             },
         };
+    }
+
+
+    async logoutDevice(
+        userId: string,
+        deviceId: string,
+    ) {
+        return this.userDevicesService.logoutDevice(
+            userId,
+            deviceId,
+        );
+    }
+
+    async logoutAllDevices(userId: string) {
+        return this.userDevicesService.logoutAllDevices(userId);
+    }
+
+    async getActiveDevices(userId: string) {
+        return this.userDevicesService.getActiveDevices(userId);
+    }
+
+    async logoutSpecificDevice(
+        userId: string,
+        deviceId: string,
+    ) {
+        return this.userDevicesService.logoutSpecificDevice(
+            userId,
+            deviceId,
+        );
     }
 }

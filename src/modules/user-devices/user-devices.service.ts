@@ -162,4 +162,78 @@ export class UserDevicesService {
 
         return !!device;
     }
+
+
+    // Logout current device
+    async logoutDevice(
+        userId: string,
+        deviceId: string,
+    ): Promise<boolean> {
+        const result = await this.dataSource
+            .getRepository(UserDevice)
+            .update(
+                {
+                    userId,
+                    deviceId,
+                    isActive: true,
+                },
+                {
+                    isActive: false,
+                    refreshTokenHash: null,
+                    refreshTokenExpiresAt: null,
+                },
+            );
+
+        return (result.affected ?? 0) > 0;
+    }
+
+    // Logout all devices
+    async logoutAllDevices(userId: string): Promise<number> {
+        const result = await this.dataSource
+            .getRepository(UserDevice)
+            .update(
+                {
+                    userId,
+                    isActive: true,
+                },
+                {
+                    isActive: false,
+                    refreshTokenHash: null,
+                    refreshTokenExpiresAt: null,
+                },
+            );
+
+        return result.affected ?? 0;
+    }
+
+    // Get active devices
+    async getActiveDevices(userId: string) {
+        return this.dataSource
+            .getRepository(UserDevice)
+            .find({
+                where: {
+                    userId,
+                    isActive: true,
+                },
+                select: {
+                    id: true,
+                    deviceId: true,
+                    deviceName: true,
+                    platform: true,
+                    lastLoginAt: true,
+                    createdAt: true,
+                },
+                order: {
+                    lastLoginAt: 'DESC',
+                },
+            });
+    }
+
+    //  Logout a particular device
+    async logoutSpecificDevice(
+        userId: string,
+        deviceId: string,
+    ): Promise<boolean> {
+        return this.logoutDevice(userId, deviceId);
+    }
 }
