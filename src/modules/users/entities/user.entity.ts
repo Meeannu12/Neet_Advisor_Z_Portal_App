@@ -5,6 +5,7 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
 } from 'typeorm';
+import { Course } from '../../../common/enums/course.enum.js';
 
 @Entity('users')
 export class User {
@@ -28,6 +29,9 @@ export class User {
 
     @Column({ type: Boolean, default: true })
     isActive: boolean
+
+    @Column({ type: 'enum', enum: Course, nullable: true, })
+    course: Course | null;
 
     @CreateDateColumn()
     createdAt: Date;
