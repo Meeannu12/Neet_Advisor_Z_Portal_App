@@ -22,38 +22,38 @@ export class UsersController {
     }
 
 
-    // @Get(':number')
-    // async findByNumber(@Param('number') number: string) {
-    //     return this.usersService.findByNumber(number)
-    // }
+    @Get(':number')
+    async findByNumber(@Param('number') number: string) {
+        return this.usersService.findByNumber(number)
+    }
 
 
     // Only Admin
-    @Get('admin')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
-    adminDashboard() {
-        return {
-            message: 'Welcome Admin!',
-        };
-    }
+    // @Get('admin')
+    // @UseGuards(JwtAuthGuard, RolesGuard)
+    // @Roles(UserRole.ADMIN)
+    // adminDashboard() {
+    //     return {
+    //         message: 'Welcome Admin!',
+    //     };
+    // }
 
-    // Admin + Student
-    @Get('student')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN, UserRole.STUDENT)
-    studentDashboard() {
-        return {
-            message: 'Welcome Student Dashboard!',
-        };
-    }
+    // // Admin + Student
+    // @Get('student')
+    // @UseGuards(JwtAuthGuard, RolesGuard)
+    // @Roles(UserRole.ADMIN, UserRole.STUDENT)
+    // studentDashboard() {
+    //     return {
+    //         message: 'Welcome Student Dashboard!',
+    //     };
+    // }
 
-    // All authenticated users
-    @Get('profile')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    profile() {
-        return {
-            message: 'Welcome to Profile!',
-        };
-    }
+    // // All authenticated users
+    // @Get('profile')
+    // @UseGuards(JwtAuthGuard, RolesGuard)
+    // profile() {
+    //     return {
+    //         message: 'Welcome to Profile!',
+    //     };
+    // }
 }
