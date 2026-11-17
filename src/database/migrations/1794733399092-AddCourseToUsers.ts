@@ -12,5 +12,5 @@ export class AddCourseToUsers1794733399092 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "course"`);
         await queryRunner.query(`DROP TYPE "public"."users_course_enum"`);
     }
-
+    
 }

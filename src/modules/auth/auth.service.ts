@@ -270,6 +270,7 @@ export class AuthService {
             message: 'OTP generated successfully',
             expiresIn: 300,
             resendAfter: 60,
+            otp
         }
     }
 

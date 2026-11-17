@@ -17,12 +17,15 @@ export class UsersController {
     }
 
     @Get()
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
     async findAll() {
         return this.usersService.findAll()
     }
 
 
     @Get(':number')
+    @UseGuards(JwtAuthGuard, RolesGuard)
     async findByNumber(@Param('number') number: string) {
         return this.usersService.findByNumber(number)
     }
