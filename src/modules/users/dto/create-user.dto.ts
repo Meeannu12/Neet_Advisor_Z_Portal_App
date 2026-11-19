@@ -1,4 +1,5 @@
-import { IsEmail, IsIn, IsNotEmpty, IsString, Matches, MaxLength } from "class-validator";
+import { IsEmail, IsEnum, IsIn, IsNotEmpty, IsString, Matches, MaxLength } from "class-validator";
+import { Course } from "../../../common/enums/course.enum.js";
 
 export class CreateUserDto {
     @IsString()
@@ -7,8 +8,8 @@ export class CreateUserDto {
     number: string
 
     @IsString()
-    @IsIn(['admin', 'student', 'parent'])
-    role: string
+    @IsIn(['admin', 'user'])
+    role: string;
 
 
 
@@ -20,6 +21,11 @@ export class CreateUserDto {
     @IsString()
     @IsEmail()
     email?: string
+
+    @IsString()
+    @IsNotEmpty()
+    @IsEnum(Course)
+    course?: Course | null;
 
     @IsString()
     @IsNotEmpty()
