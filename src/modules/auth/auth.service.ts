@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity.js';
 import { Repository } from 'typeorm';
@@ -12,7 +12,6 @@ import { DevicePlatform } from '../user-devices/entities/user-device.entity.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
-
 interface RefreshTokenPayload {
     sub: string;
     role: string;
@@ -20,11 +19,10 @@ interface RefreshTokenPayload {
     tokenType: 'refresh';
 }
 
-
 @Injectable()
 export class AuthService {
-
     private readonly logger = new Logger(AuthService.name);
+
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
@@ -36,7 +34,6 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
     ) { }
-
 
     async verifyOtp(number: string, otp: string, device: { deviceId: string, deviceName?: string, platform: DevicePlatform }) {
         const user = await this.userRepository.findOne({
@@ -111,14 +108,13 @@ export class AuthService {
                 platform: device.platform,
             });
 
-
         // Generate access token
         const accessToken = await this.jwtService.signAsync(
             {
                 sub: user.id,
                 role: user.role,
                 deviceId: registeredDevice.deviceId,
-                tokenType: 'access', // Important
+                tokenType: 'access',
             },
             {
                 secret: this.configService.getOrThrow<string>(
@@ -144,7 +140,6 @@ export class AuthService {
             },
         );
 
-
         // Store only refresh token hash
         const refreshTokenHash = createHash('sha256')
             .update(refreshToken)
@@ -164,6 +159,13 @@ export class AuthService {
         // OTP successfully verified
         await this.redisService.delete(otpKey);
         await this.redisService.delete(attemptsKey);
+
+        // Performance: Warm up Redis session cache so subsequent requests don't hit DB
+        await this.redisService.set(
+            `session:${user.id}:${registeredDevice.deviceId}`,
+            'active',
+            900,
+        );
 
         return {
             success: true,
@@ -223,36 +225,35 @@ export class AuthService {
             throw new UnauthorizedException('Your account is inactive');
         }
 
-        // 3. Check resend cooldown
+        // Check resend cooldown
         const cooldownKey = `otp:cooldown:${number}`;
-
         const cooldown = await this.redisService.get(cooldownKey);
 
         if (cooldown) {
             throw new HttpException(
-                'Please wait before requesting another OTP', HttpStatus.TOO_MANY_REQUESTS,
+                'Please wait before requesting another OTP',
+                HttpStatus.TOO_MANY_REQUESTS,
             );
         }
 
         // Reset previous wrong OTP attempts
         await this.redisService.delete(`otp:attempts:${number}`);
 
-        // 4. Generate 6-digit OTP
-        const otp = randomInt(100000, 1000000).toString()
+        // Generate 6-digit OTP
+        const otp = randomInt(100000, 1000000).toString();
 
-        // 5. Hash OTP
+        // Hash OTP
         const otpHash = createHash('sha256')
             .update(otp)
-            .digest('hex')
+            .digest('hex');
 
         const otpKey = `otp:${number}`;
-
         await this.redisService.set(otpKey, otpHash, 300);
 
-        // 7. Set 60-second resend cooldown
+        // Set 60-second resend cooldown
         await this.redisService.set(cooldownKey, '1', 60);
 
-        // 8. Send OTP
+        // Send OTP via SMS
         try {
             await this.smsService.sendOtp(number, otp);
         } catch {
@@ -264,16 +265,18 @@ export class AuthService {
             );
         }
 
+        // Security: In production, NEVER return plain OTP in the API response
+        const isProduction =
+            this.configService.get<string>('NODE_ENV') === 'production';
 
         return {
             success: true,
             message: 'OTP generated successfully',
             expiresIn: 300,
             resendAfter: 60,
-            otp
-        }
+            ...(isProduction ? {} : { otp }),
+        };
     }
-
 
     async refreshTokens(refreshToken: string) {
         let payload: RefreshTokenPayload;
@@ -369,6 +372,13 @@ export class AuthService {
             );
         }
 
+        // Performance: Warm up Redis session cache for the refreshed session
+        await this.redisService.set(
+            `session:${user.id}:${payload.deviceId}`,
+            'active',
+            900,
+        );
+
         // 7. Return new tokens
         return {
             success: true,
@@ -381,7 +391,6 @@ export class AuthService {
             },
         };
     }
-
 
     async logoutDevice(
         userId: string,

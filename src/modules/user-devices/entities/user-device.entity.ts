@@ -14,7 +14,10 @@ import { User } from '../../users/entities/user.entity.js';
 export type DevicePlatform = 'android' | 'ios' | 'web';
 
 @Entity('user_devices')
+// Unique index to ensure one registration per user device
 @Index(['userId', 'deviceId'], { unique: true })
+// Performance: Composite index for fast count and query lookups on active devices
+@Index(['userId', 'isActive'])
 export class UserDevice {
     @PrimaryGeneratedColumn('uuid')
     id!: string;

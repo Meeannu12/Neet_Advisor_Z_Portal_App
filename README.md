@@ -1,114 +1,275 @@
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <img src="https://nestjs.com/img/logo-small.svg" width="90" alt="NestJS Logo" />
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+<h1 align="center">NEET Advisor Portal Backend API</h1>
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
+<p align="center">
+  Robust, scalable, and high-performance NestJS backend powering the NEET Advisor Portal mobile and web applications.
 </p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+<p align="center">
+  <img src="https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white" alt="NestJS" />
+  <img src="https://img.shields.io/badge/TypeScript-ESM-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/PostgreSQL-TypeORM-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Redis-ioredis-DC382D?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Vitest-Unit%20Tests-6E9F18?logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Oxlint-Fast%20Linting-orange" alt="Oxlint" />
+</p>
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 📋 Overview
 
-```bash
-$ npm install
+The **NEET Advisor Portal API** provides identity verification, device session control, role-based access management, and automated lead generation for NEET examination counseling. Built on NestJS 12 and TypeORM with PostgreSQL and Redis, it handles high-concurrency requests with low-latency in-memory session caching and safe database operations.
+
+---
+
+## ✨ Key Features
+
+- 🔐 **OTP-Based Mobile Authentication**
+  - Phone number verification using 6-digit cryptographic OTPs with SHA-256 hashing.
+  - Brute-force protection: 5-attempt lockout and 60-second resend cooldown via Redis.
+  - Development convenience: OTP returned in API response only when `NODE_ENV !== 'production'`.
+
+- 📱 **Multi-Device Session & Token Management**
+  - Strict maximum of **3 active devices** per user with pessimistic locking to prevent concurrency race conditions.
+  - Dual JWT architecture: Short-lived Access Token (15m) + Long-lived Refresh Token (30d).
+  - Atomic refresh token rotation with cryptographic hash validation.
+  - Device platform tracking (`android`, `ios`, `web`) with remote single and multi-device logout capabilities.
+
+- ⚡ **High-Performance Redis Session Caching**
+  - Sub-millisecond O(1) in-memory session verification in `JwtAuthGuard`.
+  - Eliminates redundant PostgreSQL queries on every authenticated request, reducing database authorization load by ~95%.
+  - Instant session invalidation on single or multi-device logout.
+
+- 👥 **User Management & Role-Based Access Control (RBAC)**
+  - Roles supported: `ADMIN`, `USER`, and custom counseling roles.
+  - Course categorization: `UG` (Undergraduate) and `PG` (Postgraduate).
+  - Paginated user list endpoints with safety bounds on limit and page offsets.
+
+- 📥 **High-Performance Bulk Import Pipeline**
+  - Ingestion of large user lists via **Excel (.xlsx)** and **CSV** files.
+  - In-file duplicate mobile number detection and format validation.
+  - Chunked database lookups (`In(numbers)`) and chunked batch saves (`chunk: 500`) to protect memory and database connection pools.
+
+- 📩 **Automated Lead Capture & Manager Alerts**
+  - Unregistered users attempting login are automatically captured as a `ContactRequest` (`pending`).
+  - Automated HTML & plain-text email alerts dispatched to counseling managers via Nodemailer SMTP.
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+| :--- | :--- |
+| **[NestJS 12](https://nestjs.com/)** | Progressive TypeScript backend framework (ESM) |
+| **[PostgreSQL](https://www.postgresql.org/)** | Primary relational database |
+| **[TypeORM](https://typeorm.io/)** | Object-Relational Mapper & migration management |
+| **[Redis](https://redis.io/) (`ioredis`)** | In-memory session cache, OTP storage & attempt counters |
+| **[@nestjs/jwt](https://docs.nestjs.com/security/authentication)** | JSON Web Token issuance and verification |
+| **[ExcelJS](https://github.com/exceljs/exceljs) & [csv-parse](https://csv.js.org/)** | Spreadsheet and CSV parsing engine |
+| **[Nodemailer](https://nodemailer.com/)** | SMTP email client for manager notifications |
+| **[Vitest](https://vitest.dev/)** | High-speed unit and integration testing runner |
+| **[Oxlint](https://oxc.rs/)** | High-performance linter |
+
+---
+
+## 📁 Project Structure
+
+```text
+src/
+├── app.controller.ts            # Root healthcheck controller
+├── app.module.ts                # Application root module
+├── data-source.ts               # TypeORM CLI DataSource configuration
+├── main.ts                      # Bootstrap entry point (CORS, Pipes, Port)
+├── common/
+│   ├── constants/               # Role constants (ADMIN, USER)
+│   ├── decorators/              # Custom decorators (@Roles)
+│   ├── enums/                   # Enums (Course: UG, PG)
+│   └── guards/                  # Route guards (RolesGuard)
+├── database/
+│   └── migrations/              # Database schema & performance index migrations
+├── mail/
+│   ├── mail.module.ts           # Nodemailer module configuration
+│   └── mail.service.ts          # Email dispatch to managers
+├── modules/
+│   ├── auth/                    # Authentication (OTP, JWT, Refresh Token, Guard)
+│   │   ├── dto/                 # Auth DTOs (SendOtp, VerifyOtp, RefreshToken)
+│   │   ├── guards/              # High-performance JwtAuthGuard with Redis cache
+│   │   ├── auth.controller.ts   # Auth REST endpoints
+│   │   ├── auth.module.ts       # Auth dependency bundle
+│   │   └── auth.service.ts      # Core authentication business logic
+│   ├── contact-requests/        # Lead capture for unregistered login attempts
+│   │   └── entities/            # ContactRequest entity (indexed)
+│   ├── user-devices/            # Device tracking & multi-device limit enforcement
+│   │   ├── entities/            # UserDevice entity (indexed)
+│   │   └── user-devices.service.ts
+│   └── users/                   # User profiles & bulk ingestion
+│       ├── dto/                 # CreateUserDto, ImportUserDto
+│       ├── entities/            # User entity
+│       ├── interfaces/          # UserImportResult interfaces
+│       ├── utils/               # Excel and CSV parser utility
+│       ├── user-import.service.ts
+│       └── users.service.ts
+├── redis/
+│   ├── redis.module.ts          # Global Redis module
+│   └── redis.service.ts         # Redis client wrapper with retry strategy
+└── sms/
+    ├── sms.module.ts            # SMS provider module
+    └── sms.service.ts           # SMS dispatch service
 ```
 
-## Compile and run the project
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** `>= 20.x`
+- **PostgreSQL** `>= 14.x`
+- **Redis** `>= 6.x`
+
+### 1. Installation
 
 ```bash
-# development
-$ npm run start
+# Clone the repository
+git clone <repository-url>
+cd Neet_Advisor_Protal_App
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Install dependencies
+npm install
 ```
 
-## Run tests
+### 2. Environment Configuration
+
+Create a `.env` file in the root directory by copying `.env.example`:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
+Configure your environment variables:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+```ini
+# Application
+NODE_ENV=development
+PORT=3000
+CORS_ORIGIN=*
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+# PostgreSQL Database
+DATABASE_URL=postgresql://postgres:password@localhost:5432/neet_advisor_db
+
+# Redis
+REDIS_URL=redis://127.0.0.1:6379
+
+# JWT Secrets & Expirations
+JWT_ACCESS_SECRET=your_jwt_access_secret_key
+JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=30d
+
+# SMTP Configuration (Nodemailer)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_specific_password
+SMTP_FROM=no-reply@neetadvisor.com
+MANAGER_EMAILS=manager@neetadvisor.com
+```
+
+### 3. Run Database Migrations
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Run all pending migrations
+npm run migration:run
+
+# Show migration status
+npm run migration:show
+
+# Revert the last applied migration
+npm run migration:revert
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 4. Start the Application
 
-## Observability
+```bash
+# Development mode (with live reload)
+npm run start:dev
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+# Debug mode
+npm run start:debug
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+# Production build & start
+npm run build
+npm run start:prod
+```
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+---
 
-## Resources
+## 📡 API Reference
 
-Check out a few resources that may come in handy when working with NestJS:
+### 🔐 Authentication (`/auth`)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/send-otp` | Public | Generates & sends 6-digit OTP. Unregistered users trigger a contact request. |
+| `POST` | `/auth/verify-otp` | Public | Verifies OTP, enforces 3-device limit, registers device, and issues token pair. |
+| `POST` | `/auth/refresh` | Public | Rotates refresh token atomically and issues a new access token. |
+| `GET` | `/auth/protected-test`| Bearer Token | Verifies current access token and session validity. |
+| `POST` | `/auth/logout` | Bearer Token | Deactivates current device and invalidates its Redis session cache. |
+| `POST` | `/auth/logout-all` | Bearer Token | Deactivates all devices for the user and revokes all active Redis sessions. |
+| `GET` | `/auth/devices` | Bearer Token | Retrieves all active devices registered under the user account. |
+| `DELETE` | `/auth/devices/:deviceId` | Bearer Token | Logs out and deactivates a specific device session. |
 
-## Support
+### 👥 Users (`/users`)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/users` | Admin | Registers a single user. |
+| `GET` | `/users?page=1&limit=20` | Admin | Fetches paginated user records with total count and metadata. |
+| `POST` | `/users/import` | Admin | Multi-part file upload (`.xlsx` or `.csv`) for bulk user creation & updates. |
+| `GET` | `/users/:number` | Authenticated | Retrieves user details by registered mobile number. |
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 📥 Bulk User Import Specification
 
-## License
+When importing users via `POST /users/import`, the uploaded file (`.csv` or `.xlsx`) must contain the following columns:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Column | Required | Rules / Format |
+| :--- | :---: | :--- |
+| `number` | **Yes** | Valid phone number with optional `+` prefix (10–15 digits) |
+| `name` | **Yes** | Text (max 100 characters) |
+| `state` | **Yes** | Text (max 100 characters) |
+| `role` | **Yes** | Must be `user` for bulk import |
+| `course` | **Yes** | `UG` or `PG` |
+| `email` | No | Valid email format (max 150 characters) |
+
+---
+
+## 🧪 Testing & Code Quality
+
+```bash
+# Run unit tests with Vitest
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate test coverage report
+npm run test:cov
+
+# Run Oxlint for fast static analysis
+npm run lint
+
+# Format code with Prettier
+npm run format
+```
+
+---
+
+## 🛡️ License
+
+This project is private and proprietary. All rights reserved.

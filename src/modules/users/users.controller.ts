@@ -1,4 +1,15 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Query,
+    UploadedFile,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -7,8 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { UserImportService } from './user-import.service.js';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Multer } from 'multer';
-
+import 'multer';
 
 @Controller('users')
 export class UsersController {
@@ -17,21 +27,25 @@ export class UsersController {
         private readonly userImportService: UserImportService,
     ) { }
 
-
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
     async create(@Body() dto: CreateUserDto) {
-        return this.usersService.create(dto)
+        return this.usersService.create(dto);
     }
 
+    // Performance: Paginated endpoint with optional page and limit query params
     @Get()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
-    async findAll() {
-        return this.usersService.findAll()
+    async findAll(
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        const pageNum = page ? parseInt(page, 10) : 1;
+        const limitNum = limit ? parseInt(limit, 10) : 20;
+        return this.usersService.findAll(pageNum, limitNum);
     }
-
 
     @Post('import')
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,40 +88,9 @@ export class UsersController {
         );
     }
 
-
     @Get(':number')
     @UseGuards(JwtAuthGuard, RolesGuard)
     async findByNumber(@Param('number') number: string) {
-        return this.usersService.findByNumber(number)
+        return this.usersService.findByNumber(number);
     }
-
-
-    // Only Admin
-    // @Get('admin')
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // @Roles(UserRole.ADMIN)
-    // adminDashboard() {
-    //     return {
-    //         message: 'Welcome Admin!',
-    //     };
-    // }
-
-    // // Admin + Student
-    // @Get('student')
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // @Roles(UserRole.ADMIN, UserRole.STUDENT)
-    // studentDashboard() {
-    //     return {
-    //         message: 'Welcome Student Dashboard!',
-    //     };
-    // }
-
-    // // All authenticated users
-    // @Get('profile')
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // profile() {
-    //     return {
-    //         message: 'Welcome to Profile!',
-    //     };
-    // }
 }

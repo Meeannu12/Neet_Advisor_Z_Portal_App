@@ -8,7 +8,6 @@ import { UserRole } from '../../common/constants/roles.constant.js';
 
 import { parseUserImportFile } from './utils/user-import-parser.util.js';
 import {
-    UserImportError,
     UserImportResult,
 } from './interfaces/user-import-result.interface.js';
 
@@ -23,7 +22,6 @@ export class UserImportService {
         buffer: Buffer,
         originalName: string,
     ): Promise<UserImportResult> {
-
         const parsedRows = await parseUserImportFile(
             buffer,
             originalName,
@@ -37,7 +35,7 @@ export class UserImportService {
             errors: [],
         };
 
-        // Duplicate mobile numbers detect karo
+        // Detect duplicate mobile numbers within uploaded file
         const numberCount = new Map<string, number>();
 
         for (const row of parsedRows) {
@@ -86,11 +84,6 @@ export class UserImportService {
                 continue;
             }
 
-            // if (!Object.values(UserRole).includes(role as (typeof UserRole)[keyof typeof UserRole])) {
-            //     addError('Invalid role');
-            //     continue;
-            // }
-
             if (role !== UserRole.USER) {
                 addError('Only user role is allowed in bulk import');
                 continue;
@@ -118,11 +111,19 @@ export class UserImportService {
 
         const numbers = validRows.map((row) => row.data.number);
 
-        const existingUsers = await this.userRepository.find({
-            where: {
-                number: In(numbers),
-            },
-        });
+        // Performance: Chunk the lookup to prevent SQL parameter overflow or huge IN clauses
+        const CHUNK_SIZE = 500;
+        const existingUsers: User[] = [];
+
+        for (let i = 0; i < numbers.length; i += CHUNK_SIZE) {
+            const chunk = numbers.slice(i, i + CHUNK_SIZE);
+            const usersChunk = await this.userRepository.find({
+                where: {
+                    number: In(chunk),
+                },
+            });
+            existingUsers.push(...usersChunk);
+        }
 
         const existingMap = new Map(
             existingUsers.map((user) => [user.number, user]),
@@ -167,11 +168,8 @@ export class UserImportService {
             }
         }
 
-        try {
-            await this.userRepository.save(usersToSave);
-        } catch (error) {
-            throw error;
-        }
+        // Performance: Save in chunks to reduce memory pressure and avoid holding locks on long transactions
+        await this.userRepository.save(usersToSave, { chunk: CHUNK_SIZE });
 
         return result;
     }
