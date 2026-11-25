@@ -6,6 +6,7 @@ import { RedisModule } from './redis/redis.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ContactRequestsModule } from './modules/contact-requests/contact-requests.module.js';
 import { UserDevicesModule } from './modules/user-devices/user-devices.module.js';
+import { CoursesModule } from './modules/courses/courses.module.js';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UserDevicesModule } from './modules/user-devices/user-devices.module.js
     }),
 
     UsersModule,
+    CoursesModule,
     RedisModule,
     AuthModule,
     ContactRequestsModule,

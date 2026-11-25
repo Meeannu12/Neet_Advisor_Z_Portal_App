@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from './entities/user.entity.js';
+import { CoursesService } from '../courses/courses.service.js';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 describe('UsersService', () => {
@@ -16,9 +17,19 @@ describe('UsersService', () => {
           useValue: {
             find: vi.fn(),
             findOne: vi.fn(),
+            findOneOrFail: vi.fn(),
             findAndCount: vi.fn(),
             create: vi.fn(),
             save: vi.fn(),
+          },
+        },
+        {
+          provide: CoursesService,
+          useValue: {
+            findOrCreate: vi.fn(),
+            findOrCreateMany: vi.fn(),
+            findAll: vi.fn(),
+            findByName: vi.fn(),
           },
         },
       ],

@@ -9,10 +9,17 @@ import { JwtModule } from '@nestjs/jwt';
 import { UserDevicesModule } from '../user-devices/user-devices.module.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { UserImportService } from './user-import.service.js';
+import { CoursesModule } from '../courses/courses.module.js';
 
 @Module({
-    imports: [AuthModule, JwtModule.register({}), UserDevicesModule, TypeOrmModule.forFeature([User])],
-    exports: [TypeOrmModule],
+    imports: [
+        AuthModule,
+        JwtModule.register({}),
+        UserDevicesModule,
+        CoursesModule,
+        TypeOrmModule.forFeature([User]),
+    ],
+    exports: [TypeOrmModule, UsersService],
     controllers: [UsersController],
     providers: [UsersService, UserImportService, RolesGuard, JwtAuthGuard]
 })

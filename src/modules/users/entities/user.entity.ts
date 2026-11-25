@@ -4,8 +4,11 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
+    ManyToOne,
+    JoinColumn,
+    Index,
 } from 'typeorm';
-import { Course } from '../../../common/enums/course.enum.js';
+import { Course } from '../../courses/entities/course.entity.js';
 
 @Entity('users')
 export class User {
@@ -28,9 +31,17 @@ export class User {
     state: string;
 
     @Column({ type: Boolean, default: true })
-    isActive: boolean
+    isActive: boolean;
 
-    @Column({ type: 'enum', enum: Course, nullable: true, })
+    @Column({ type: 'uuid', nullable: true })
+    @Index()
+    courseId: string | null;
+
+    @ManyToOne(() => Course, (course) => course.users, {
+        nullable: true,
+        onDelete: 'SET NULL',
+    })
+    @JoinColumn({ name: 'courseId' })
     course: Course | null;
 
     @CreateDateColumn()

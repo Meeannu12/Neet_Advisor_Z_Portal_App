@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
 import { User } from './entities/user.entity.js';
-import { Course } from '../../common/enums/course.enum.js';
 import { UserRole } from '../../common/constants/roles.constant.js';
+import { CoursesService } from '../courses/courses.service.js';
 
 import { parseUserImportFile } from './utils/user-import-parser.util.js';
 import {
@@ -16,6 +16,7 @@ export class UserImportService {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        private readonly coursesService: CoursesService,
     ) { }
 
     async importUsers(
@@ -97,8 +98,8 @@ export class UserImportService {
                 continue;
             }
 
-            if (course && !Object.values(Course).includes(course as Course)) {
-                addError('Course must be UG or PG');
+            if (course && course.trim().length > 100) {
+                addError('Course name must be under 100 characters');
                 continue;
             }
 
@@ -109,9 +110,15 @@ export class UserImportService {
             return result;
         }
 
-        const numbers = validRows.map((row) => row.data.number);
+        // 1. Batch Course Resolution: Find or dynamically create all distinct courses from file
+        const distinctCourseNames = validRows
+            .map((row) => row.data.course)
+            .filter((c): c is string => Boolean(c && c.trim()));
 
-        // Performance: Chunk the lookup to prevent SQL parameter overflow or huge IN clauses
+        const courseMap = await this.coursesService.findOrCreateMany(distinctCourseNames);
+
+        // 2. Fetch existing users in chunks to avoid parameter limits
+        const numbers = validRows.map((row) => row.data.number);
         const CHUNK_SIZE = 500;
         const existingUsers: User[] = [];
 
@@ -137,6 +144,10 @@ export class UserImportService {
 
             const existingUser = existingMap.get(number);
 
+            const normalizedCourseName = course ? course.trim().toUpperCase() : null;
+            const resolvedCourse = normalizedCourseName ? courseMap.get(normalizedCourseName) : null;
+            const courseId = resolvedCourse ? resolvedCourse.id : null;
+
             if (existingUser) {
                 existingUser.name = name;
                 existingUser.state = state;
@@ -146,8 +157,8 @@ export class UserImportService {
                     existingUser.email = email;
                 }
 
-                if (course) {
-                    existingUser.course = course as Course;
+                if (courseId) {
+                    existingUser.courseId = courseId;
                 }
 
                 usersToSave.push(existingUser);
@@ -159,7 +170,7 @@ export class UserImportService {
                     email: email || null,
                     state,
                     role,
-                    course: course ? course as Course : null,
+                    courseId,
                     isActive: true,
                 });
 

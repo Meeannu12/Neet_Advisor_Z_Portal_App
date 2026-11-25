@@ -21,7 +21,7 @@
 
 ## 📋 Overview
 
-The **NEET Advisor Portal API** provides identity verification, device session control, role-based access management, and automated lead generation for NEET examination counseling. Built on NestJS 12 and TypeORM with PostgreSQL and Redis, it handles high-concurrency requests with low-latency in-memory session caching and safe database operations.
+The **NEET Advisor Portal API** provides identity verification, device session control, role-based access management, dynamic course assignment, and automated lead generation for NEET examination counseling. Built on NestJS 12 and TypeORM with PostgreSQL and Redis, it handles high-concurrency requests with low-latency in-memory session caching and safe database operations.
 
 ---
 
@@ -43,14 +43,20 @@ The **NEET Advisor Portal API** provides identity verification, device session c
   - Eliminates redundant PostgreSQL queries on every authenticated request, reducing database authorization load by ~95%.
   - Instant session invalidation on single or multi-device logout.
 
+- 🎓 **Dynamic Courses & Relational Data Model**
+  - Normalized `courses` table storing dynamic counseling tracks (e.g., `UG`, `PG`, `MBBS`, `BDS`, `AYUSH`, `MD`, `MS`).
+  - **Find-or-Create pattern**: Whenever a new course is specified during user registration or bulk import, it is automatically resolved and created in the `courses` table without manual database seeding or migrations.
+  - Relational mapping: `User` entity maintains a direct `ManyToOne` relation (`courseId`) to the `Course` entity.
+
 - 👥 **User Management & Role-Based Access Control (RBAC)**
   - Roles supported: `ADMIN`, `USER`, and custom counseling roles.
-  - Course categorization: `UG` (Undergraduate) and `PG` (Postgraduate).
+  - Eager course relation loading for profile inspections.
   - Paginated user list endpoints with safety bounds on limit and page offsets.
 
 - 📥 **High-Performance Bulk Import Pipeline**
   - Ingestion of large user lists via **Excel (.xlsx)** and **CSV** files.
   - In-file duplicate mobile number detection and format validation.
+  - **Batch Course Resolution**: Extracts distinct courses from uploaded files, batch-inserts any new courses in a single query, and maps them to user records using in-memory lookups.
   - Chunked database lookups (`In(numbers)`) and chunked batch saves (`chunk: 500`) to protect memory and database connection pools.
 
 - 📩 **Automated Lead Capture & Manager Alerts**
@@ -86,7 +92,7 @@ src/
 ├── common/
 │   ├── constants/               # Role constants (ADMIN, USER)
 │   ├── decorators/              # Custom decorators (@Roles)
-│   ├── enums/                   # Enums (Course: UG, PG)
+│   ├── enums/                   # Enums & constants (Course: UG, PG)
 │   └── guards/                  # Route guards (RolesGuard)
 ├── database/
 │   └── migrations/              # Database schema & performance index migrations
@@ -102,12 +108,16 @@ src/
 │   │   └── auth.service.ts      # Core authentication business logic
 │   ├── contact-requests/        # Lead capture for unregistered login attempts
 │   │   └── entities/            # ContactRequest entity (indexed)
+│   ├── courses/                 # Dynamic courses management
+│   │   ├── entities/            # Course entity (indexed, unique name)
+│   │   ├── courses.module.ts    # Courses module bundle
+│   │   └── courses.service.ts   # Find-or-create & batch resolution service
 │   ├── user-devices/            # Device tracking & multi-device limit enforcement
 │   │   ├── entities/            # UserDevice entity (indexed)
 │   │   └── user-devices.service.ts
 │   └── users/                   # User profiles & bulk ingestion
 │       ├── dto/                 # CreateUserDto, ImportUserDto
-│       ├── entities/            # User entity
+│       ├── entities/            # User entity (course relation)
 │       ├── interfaces/          # UserImportResult interfaces
 │       ├── utils/               # Excel and CSV parser utility
 │       ├── user-import.service.ts
@@ -227,10 +237,10 @@ npm run start:prod
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/users` | Admin | Registers a single user. |
-| `GET` | `/users?page=1&limit=20` | Admin | Fetches paginated user records with total count and metadata. |
-| `POST` | `/users/import` | Admin | Multi-part file upload (`.xlsx` or `.csv`) for bulk user creation & updates. |
-| `GET` | `/users/:number` | Authenticated | Retrieves user details by registered mobile number. |
+| `POST` | `/users` | Admin | Registers a single user. Dynamically creates course if not already present. |
+| `GET` | `/users?page=1&limit=20` | Admin | Fetches paginated user records with course details and total metadata. |
+| `POST` | `/users/import` | Admin | Multi-part file upload (`.xlsx` or `.csv`) for bulk user creation & updates with batch course resolution. |
+| `GET` | `/users/:number` | Authenticated | Retrieves user details with associated course by registered mobile number. |
 
 ---
 
@@ -244,7 +254,7 @@ When importing users via `POST /users/import`, the uploaded file (`.csv` or `.xl
 | `name` | **Yes** | Text (max 100 characters) |
 | `state` | **Yes** | Text (max 100 characters) |
 | `role` | **Yes** | Must be `user` for bulk import |
-| `course` | **Yes** | `UG` or `PG` |
+| `course` | **Yes** | Any course name string (e.g. `UG`, `PG`, `MBBS`, `BDS`). Dynamically resolved & created. |
 | `email` | No | Valid email format (max 150 characters) |
 
 ---
