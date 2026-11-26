@@ -4,10 +4,8 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
-    OneToMany,
     Index,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity.js';
 
 @Entity('courses')
 export class Course {
@@ -23,9 +21,6 @@ export class Course {
 
     @Column({ type: 'boolean', default: true })
     isActive!: boolean;
-
-    @OneToMany(() => User, (user) => user.course)
-    users!: User[];
 
     @CreateDateColumn()
     createdAt!: Date;

@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/TypeScript-ESM-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/PostgreSQL-TypeORM-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Redis-ioredis-DC382D?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Cloudflare-R2%20Storage-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare R2" />
   <img src="https://img.shields.io/badge/Vitest-Unit%20Tests-6E9F18?logo=vitest&logoColor=white" alt="Vitest" />
   <img src="https://img.shields.io/badge/Oxlint-Fast%20Linting-orange" alt="Oxlint" />
 </p>
@@ -21,7 +22,7 @@
 
 ## 📋 Overview
 
-The **NEET Advisor Portal API** provides identity verification, device session control, role-based access management, dynamic course assignment, and automated lead generation for NEET examination counseling. Built on NestJS 12 and TypeORM with PostgreSQL and Redis, it handles high-concurrency requests with low-latency in-memory session caching and safe database operations.
+The **NEET Advisor Portal API** provides identity verification, device session control, role-based access management, dynamic course assignment, automated lead generation, and high-performance video streaming for NEET examination counseling. Built on NestJS 12 and TypeORM with PostgreSQL, Redis, and Cloudflare R2, it handles high-concurrency requests with low-latency in-memory session caching and zero-egress video delivery.
 
 ---
 
@@ -43,14 +44,18 @@ The **NEET Advisor Portal API** provides identity verification, device session c
   - Eliminates redundant PostgreSQL queries on every authenticated request, reducing database authorization load by ~95%.
   - Instant session invalidation on single or multi-device logout.
 
+- 🎥 **Cloudflare R2 Video Streaming & Zero-Egress Storage**
+  - **Zero Egress Fees**: Cloudflare R2 object storage eliminates expensive bandwidth and egress costs for video delivery.
+  - **Buffer-Free Streaming**: HTTP Range Requests (`bytes=...`) allow HTML5, Android (ExoPlayer), and iOS (AVPlayer) to stream chunks on-the-fly without downloading entire files.
+  - **Presigned Upload Architecture**: Clients upload large video files directly to Cloudflare R2 via AWS Signature V4 presigned PUT URLs, preserving backend server bandwidth and CPU.
+  - **Clean Relational Catalog**: Each video is linked to normalized relational lookup entities (`course`, `language`, `session`, `category`) and formatted as clean, flat JSON in API responses.
+
 - 🎓 **Dynamic Courses & Relational Data Model**
   - Normalized `courses` table storing dynamic counseling tracks (e.g., `UG`, `PG`, `MBBS`, `BDS`, `AYUSH`, `MD`, `MS`).
-  - **Find-or-Create pattern**: Whenever a new course is specified during user registration or bulk import, it is automatically resolved and created in the `courses` table without manual database seeding or migrations.
-  - Relational mapping: `User` entity maintains a direct `ManyToOne` relation (`courseId`) to the `Course` entity.
+  - **Find-or-Create pattern**: Whenever a new course is specified during user registration, video publishing, or bulk import, it is automatically resolved and created in the `courses` table.
 
 - 👥 **User Management & Role-Based Access Control (RBAC)**
   - Roles supported: `ADMIN`, `USER`, and custom counseling roles.
-  - Eager course relation loading for profile inspections.
   - Paginated user list endpoints with safety bounds on limit and page offsets.
 
 - 📥 **High-Performance Bulk Import Pipeline**
@@ -73,6 +78,7 @@ The **NEET Advisor Portal API** provides identity verification, device session c
 | **[PostgreSQL](https://www.postgresql.org/)** | Primary relational database |
 | **[TypeORM](https://typeorm.io/)** | Object-Relational Mapper & migration management |
 | **[Redis](https://redis.io/) (`ioredis`)** | In-memory session cache, OTP storage & attempt counters |
+| **[Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)** | S3-compatible object storage with zero egress fees for videos & thumbnails |
 | **[@nestjs/jwt](https://docs.nestjs.com/security/authentication)** | JSON Web Token issuance and verification |
 | **[ExcelJS](https://github.com/exceljs/exceljs) & [csv-parse](https://csv.js.org/)** | Spreadsheet and CSV parsing engine |
 | **[Nodemailer](https://nodemailer.com/)** | SMTP email client for manager notifications |
@@ -101,33 +107,23 @@ src/
 │   └── mail.service.ts          # Email dispatch to managers
 ├── modules/
 │   ├── auth/                    # Authentication (OTP, JWT, Refresh Token, Guard)
-│   │   ├── dto/                 # Auth DTOs (SendOtp, VerifyOtp, RefreshToken)
-│   │   ├── guards/              # High-performance JwtAuthGuard with Redis cache
-│   │   ├── auth.controller.ts   # Auth REST endpoints
-│   │   ├── auth.module.ts       # Auth dependency bundle
-│   │   └── auth.service.ts      # Core authentication business logic
+│   ├── categories/              # Video categories (Cutoff Analysis, College Review, etc.)
 │   ├── contact-requests/        # Lead capture for unregistered login attempts
-│   │   └── entities/            # ContactRequest entity (indexed)
-│   ├── courses/                 # Dynamic courses management
-│   │   ├── entities/            # Course entity (indexed, unique name)
-│   │   ├── courses.module.ts    # Courses module bundle
-│   │   └── courses.service.ts   # Find-or-create & batch resolution service
+│   ├── courses/                 # Dynamic courses management (UG, PG, MBBS, etc.)
+│   ├── languages/               # Video languages (Hindi, English, etc.)
+│   ├── sessions/                # Counseling sessions (2024-25, 2025-26, etc.)
+│   ├── storage/                 # Cloudflare R2 S3 storage client & AWS SigV4 presigner
 │   ├── user-devices/            # Device tracking & multi-device limit enforcement
-│   │   ├── entities/            # UserDevice entity (indexed)
-│   │   └── user-devices.service.ts
-│   └── users/                   # User profiles & bulk ingestion
-│       ├── dto/                 # CreateUserDto, ImportUserDto
-│       ├── entities/            # User entity (course relation)
-│       ├── interfaces/          # UserImportResult interfaces
-│       ├── utils/               # Excel and CSV parser utility
-│       ├── user-import.service.ts
-│       └── users.service.ts
-├── redis/
-│   ├── redis.module.ts          # Global Redis module
-│   └── redis.service.ts         # Redis client wrapper with retry strategy
-└── sms/
-    ├── sms.module.ts            # SMS provider module
-    └── sms.service.ts           # SMS dispatch service
+│   ├── users/                   # User profiles & bulk ingestion
+│   └── videos/                  # Video catalog, streaming URLs & metadata management
+│       ├── dto/                 # CreateVideoDto, QueryVideosDto, UploadUrlDto
+│       ├── entities/            # Video entity (relational indexes)
+│       ├── videos.controller.ts # Video endpoints
+│       ├── videos.module.ts     # Videos module bundle
+│       └── videos.service.ts    # Video business logic & R2 presigning
+└── redis/
+    ├── redis.module.ts          # Global Redis module
+    └── redis.service.ts         # Redis client wrapper with retry strategy
 ```
 
 ---
@@ -139,6 +135,7 @@ src/
 - **Node.js** `>= 20.x`
 - **PostgreSQL** `>= 14.x`
 - **Redis** `>= 6.x`
+- **Cloudflare Account** (with R2 enabled)
 
 ### 1. Installation
 
@@ -178,6 +175,13 @@ JWT_ACCESS_SECRET=your_jwt_access_secret_key
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=30d
+
+# Cloudflare R2 Storage (S3-Compatible)
+R2_ACCOUNT_ID=your_cloudflare_account_id
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+R2_BUCKET_NAME=neet-advisor-media
+R2_PUBLIC_URL=https://pub-yourhash.r2.dev
 
 # SMTP Configuration (Nodemailer)
 SMTP_HOST=smtp.gmail.com
@@ -239,8 +243,37 @@ npm run start:prod
 | :--- | :--- | :--- | :--- |
 | `POST` | `/users` | Admin | Registers a single user. Dynamically creates course if not already present. |
 | `GET` | `/users?page=1&limit=20` | Admin | Fetches paginated user records with course details and total metadata. |
-| `POST` | `/users/import` | Admin | Multi-part file upload (`.xlsx` or `.csv`) for bulk user creation & updates with batch course resolution. |
+| `POST` | `/users/import` | Admin | Multi-part file upload (`.xlsx` or `.csv`) for bulk user creation with batch course resolution. |
 | `GET` | `/users/:number` | Authenticated | Retrieves user details with associated course by registered mobile number. |
+
+### 🎥 Videos & Streaming (`/videos`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/videos/upload-url` | Admin | Generates Cloudflare R2 Presigned PUT upload URL for direct video/thumbnail upload. |
+| `POST` | `/videos` | Admin | Registers newly uploaded video metadata with relational lookup resolution. |
+| `GET` | `/videos` | Authenticated | Paginated & filtered catalog (`?course=UG&category=Cutoff&isPremium=false&search=...`). |
+| `GET` | `/videos/:id` | Authenticated | Retrieves single video details with streaming and thumbnail URLs. |
+| `DELETE`| `/videos/:id` | Admin | Deletes video record from database and purges files from Cloudflare R2 bucket. |
+
+#### Sample Video Response:
+```json
+{
+  "id": "e4f8b2d1-93c4-4a5e-b81f-723a10bc9831",
+  "title": "NEET 2025 Round 1 Expected Cutoff",
+  "description": "Comprehensive cutoff analysis across AIQ and State quotas",
+  "isPremium": false,
+  "thumbnailUrl": "https://pub-xxxx.r2.dev/thumbnails/1732612000-thumb.jpg",
+  "videoUrl": "https://pub-xxxx.r2.dev/videos/1732612000-cutoff.mp4",
+  "duration": 720,
+  "course": "UG",
+  "language": "Hindi",
+  "session": "2025-26",
+  "category": "Cutoff Analysis",
+  "createdAt": "2026-11-26T10:00:00.000Z",
+  "updatedAt": "2026-11-26T10:00:00.000Z"
+}
+```
 
 ---
 
@@ -262,7 +295,7 @@ When importing users via `POST /users/import`, the uploaded file (`.csv` or `.xl
 ## 🧪 Testing & Code Quality
 
 ```bash
-# Run unit tests with Vitest
+# Run unit tests with Vitest (10 test suites, 11 tests)
 npm test
 
 # Run tests in watch mode

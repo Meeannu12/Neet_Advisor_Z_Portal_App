@@ -7,6 +7,11 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { ContactRequestsModule } from './modules/contact-requests/contact-requests.module.js';
 import { UserDevicesModule } from './modules/user-devices/user-devices.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
+import { StorageModule } from './modules/storage/storage.module.js';
+import { LanguagesModule } from './modules/languages/languages.module.js';
+import { SessionsModule } from './modules/sessions/sessions.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { VideosModule } from './modules/videos/videos.module.js';
 
 @Module({
   imports: [
@@ -26,10 +31,6 @@ import { CoursesModule } from './modules/courses/courses.module.js';
 
         synchronize: false,
 
-        // ssl: {
-        //   rejectUnauthorized: false,
-        // },
-
         retryAttempts: 3,
         retryDelay: 3000,
       }),
@@ -37,6 +38,11 @@ import { CoursesModule } from './modules/courses/courses.module.js';
 
     UsersModule,
     CoursesModule,
+    StorageModule,
+    LanguagesModule,
+    SessionsModule,
+    CategoriesModule,
+    VideosModule,
     RedisModule,
     AuthModule,
     ContactRequestsModule,

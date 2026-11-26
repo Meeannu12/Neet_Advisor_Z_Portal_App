@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,6 +11,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
+@Global()
 @Module({
   imports: [
     ConfigModule,
@@ -19,10 +20,16 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     SmsModule,
     MailModule,
     ContactRequestsModule,
-    UserDevicesModule
+    UserDevicesModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],
-  exports:[JwtAuthGuard]
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    JwtModule,
+    UserDevicesModule,
+    TypeOrmModule,
+  ],
 })
 export class AuthModule { }

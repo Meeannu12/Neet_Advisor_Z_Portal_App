@@ -37,7 +37,7 @@ export class User {
     @Index()
     courseId: string | null;
 
-    @ManyToOne(() => Course, (course) => course.users, {
+    @ManyToOne(() => Course, {
         nullable: true,
         onDelete: 'SET NULL',
     })
