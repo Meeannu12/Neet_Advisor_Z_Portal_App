@@ -12,6 +12,7 @@ import { Course } from '../../courses/entities/course.entity.js';
 import { Language } from '../../languages/entities/language.entity.js';
 import { Session } from '../../sessions/entities/session.entity.js';
 import { Category } from '../../categories/entities/category.entity.js';
+import { CounsellingType } from '../../counselling-types/entities/counselling-type.entity.js';
 
 @Entity('videos')
 export class Video {
@@ -69,6 +70,14 @@ export class Video {
     @ManyToOne(() => Category, { onDelete: 'RESTRICT' })
     @JoinColumn({ name: 'categoryId' })
     category!: Category;
+
+    @Column({ type: 'uuid', nullable: true })
+    @Index()
+    counsellingTypeId!: string | null;
+
+    @ManyToOne(() => CounsellingType, { onDelete: 'SET NULL', nullable: true })
+    @JoinColumn({ name: 'counsellingTypeId' })
+    counsellingType!: CounsellingType | null;
 
     @CreateDateColumn()
     createdAt!: Date;

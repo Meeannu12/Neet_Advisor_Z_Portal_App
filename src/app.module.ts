@@ -11,6 +11,7 @@ import { StorageModule } from './modules/storage/storage.module.js';
 import { LanguagesModule } from './modules/languages/languages.module.js';
 import { SessionsModule } from './modules/sessions/sessions.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { CounsellingTypesModule } from './modules/counselling-types/counselling-types.module.js';
 import { VideosModule } from './modules/videos/videos.module.js';
 
 @Module({
@@ -42,6 +43,7 @@ import { VideosModule } from './modules/videos/videos.module.js';
     LanguagesModule,
     SessionsModule,
     CategoriesModule,
+    CounsellingTypesModule,
     VideosModule,
     RedisModule,
     AuthModule,

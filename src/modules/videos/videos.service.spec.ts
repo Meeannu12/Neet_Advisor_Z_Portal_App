@@ -2,10 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VideosService } from './videos.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Video } from './entities/video.entity.js';
+import { User } from '../users/entities/user.entity.js';
 import { CoursesService } from '../courses/courses.service.js';
 import { LanguagesService } from '../languages/languages.service.js';
 import { SessionsService } from '../sessions/sessions.service.js';
 import { CategoriesService } from '../categories/categories.service.js';
+import { CounsellingTypesService } from '../counselling-types/counselling-types.service.js';
 import { StorageService } from '../storage/storage.service.js';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 
@@ -28,6 +30,12 @@ describe('VideosService', () => {
                     },
                 },
                 {
+                    provide: getRepositoryToken(User),
+                    useValue: {
+                        findOne: vi.fn(),
+                    },
+                },
+                {
                     provide: CoursesService,
                     useValue: { findOrCreate: vi.fn() },
                 },
@@ -41,6 +49,10 @@ describe('VideosService', () => {
                 },
                 {
                     provide: CategoriesService,
+                    useValue: { findOrCreate: vi.fn() },
+                },
+                {
+                    provide: CounsellingTypesService,
                     useValue: { findOrCreate: vi.fn() },
                 },
                 {

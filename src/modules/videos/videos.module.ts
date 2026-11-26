@@ -8,6 +8,7 @@ import { CoursesModule } from '../courses/courses.module.js';
 import { LanguagesModule } from '../languages/languages.module.js';
 import { SessionsModule } from '../sessions/sessions.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
+import { CounsellingTypesModule } from '../counselling-types/counselling-types.module.js';
 import { StorageModule } from '../storage/storage.module.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 
@@ -18,6 +19,7 @@ import { RolesGuard } from '../../common/guards/roles.guard.js';
         LanguagesModule,
         SessionsModule,
         CategoriesModule,
+        CounsellingTypesModule,
         StorageModule,
     ],
     controllers: [VideosController],

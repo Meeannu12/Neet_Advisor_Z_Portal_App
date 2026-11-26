@@ -6,6 +6,7 @@ import {
     Param,
     Post,
     Query,
+    Req,
     UseGuards,
 } from '@nestjs/common';
 import { VideosService } from './videos.service.js';
@@ -16,6 +17,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { UserRole } from '../../common/constants/roles.constant.js';
+import type { Request } from 'express';
+
+interface AuthenticatedRequest extends Request {
+    user: {
+        sub: string;
+        role: string;
+        deviceId: string;
+        tokenType: 'access';
+    };
+}
 
 @Controller('videos')
 export class VideosController {
@@ -42,12 +53,17 @@ export class VideosController {
     }
 
     /**
-     * Authenticated / Public: Get paginated and filtered video catalog
+     * Authenticated: Get paginated and filtered video catalog.
+     * Automatically scopes by user's assigned course (UG/PG) from token.
+     * Optional query filters: session, category, language, counsellingType.
      */
     @Get()
     @UseGuards(JwtAuthGuard)
-    findAll(@Query() query: QueryVideosDto) {
-        return this.videosService.findAll(query);
+    findAll(
+        @Req() req: AuthenticatedRequest,
+        @Query() query: QueryVideosDto,
+    ) {
+        return this.videosService.findAll(query, req.user?.sub, req.user?.role);
     }
 
     /**

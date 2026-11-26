@@ -48,7 +48,8 @@ The **NEET Advisor Portal API** provides identity verification, device session c
   - **Zero Egress Fees**: Cloudflare R2 object storage eliminates expensive bandwidth and egress costs for video delivery.
   - **Buffer-Free Streaming**: HTTP Range Requests (`bytes=...`) allow HTML5, Android (ExoPlayer), and iOS (AVPlayer) to stream chunks on-the-fly without downloading entire files.
   - **Presigned Upload Architecture**: Clients upload large video files directly to Cloudflare R2 via AWS Signature V4 presigned PUT URLs, preserving backend server bandwidth and CPU.
-  - **Clean Relational Catalog**: Each video is linked to normalized relational lookup entities (`course`, `language`, `session`, `category`) and formatted as clean, flat JSON in API responses.
+  - **Automatic Course-Based Scoping**: In `GET /videos`, regular students automatically receive videos filtered by their assigned course (`UG` / `PG`) from their authenticated token, with optional query filters (`session`, `category`, `language`, `counsellingType`).
+  - **Normalized Relational Catalog**: Each video links to normalized lookup entities (`courses`, `languages`, `sessions`, `categories`, `counselling_types`) and is returned as clean, flat JSON in API responses.
 
 - 🎓 **Dynamic Courses & Relational Data Model**
   - Normalized `courses` table storing dynamic counseling tracks (e.g., `UG`, `PG`, `MBBS`, `BDS`, `AYUSH`, `MD`, `MS`).
@@ -109,6 +110,7 @@ src/
 │   ├── auth/                    # Authentication (OTP, JWT, Refresh Token, Guard)
 │   ├── categories/              # Video categories (Cutoff Analysis, College Review, etc.)
 │   ├── contact-requests/        # Lead capture for unregistered login attempts
+│   ├── counselling-types/       # Counselling types (All India Quota, State Quota, etc.)
 │   ├── courses/                 # Dynamic courses management (UG, PG, MBBS, etc.)
 │   ├── languages/               # Video languages (Hindi, English, etc.)
 │   ├── sessions/                # Counseling sessions (2024-25, 2025-26, etc.)
@@ -252,7 +254,7 @@ npm run start:prod
 | :--- | :--- | :--- | :--- |
 | `POST` | `/videos/upload-url` | Admin | Generates Cloudflare R2 Presigned PUT upload URL for direct video/thumbnail upload. |
 | `POST` | `/videos` | Admin | Registers newly uploaded video metadata with relational lookup resolution. |
-| `GET` | `/videos` | Authenticated | Paginated & filtered catalog (`?course=UG&category=Cutoff&isPremium=false&search=...`). |
+| `GET` | `/videos` | Authenticated | Paginated & filtered catalog. Course is automatically scoped by user's assigned course (UG/PG) from token. Optional filters: `session`, `category`, `language`, `counsellingType`, `isPremium`, `search`. |
 | `GET` | `/videos/:id` | Authenticated | Retrieves single video details with streaming and thumbnail URLs. |
 | `DELETE`| `/videos/:id` | Admin | Deletes video record from database and purges files from Cloudflare R2 bucket. |
 
@@ -270,6 +272,7 @@ npm run start:prod
   "language": "Hindi",
   "session": "2025-26",
   "category": "Cutoff Analysis",
+  "counsellingType": "All India Quota",
   "createdAt": "2026-11-26T10:00:00.000Z",
   "updatedAt": "2026-11-26T10:00:00.000Z"
 }
@@ -295,7 +298,7 @@ When importing users via `POST /users/import`, the uploaded file (`.csv` or `.xl
 ## 🧪 Testing & Code Quality
 
 ```bash
-# Run unit tests with Vitest (10 test suites, 11 tests)
+# Run unit tests with Vitest (11 test suites, 12 tests)
 npm test
 
 # Run tests in watch mode

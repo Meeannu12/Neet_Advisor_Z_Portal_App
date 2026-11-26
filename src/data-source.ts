@@ -5,6 +5,7 @@ import { Course } from './modules/courses/entities/course.entity.js';
 import { Language } from './modules/languages/entities/language.entity.js';
 import { Session } from './modules/sessions/entities/session.entity.js';
 import { Category } from './modules/categories/entities/category.entity.js';
+import { CounsellingType } from './modules/counselling-types/entities/counselling-type.entity.js';
 import { ContactRequest } from './modules/contact-requests/entities/contact-request.entity.js';
 import { User } from './modules/users/entities/user.entity.js';
 import { UserDevice } from './modules/user-devices/entities/user-device.entity.js';
@@ -19,6 +20,7 @@ export default new DataSource({
         Language,
         Session,
         Category,
+        CounsellingType,
         ContactRequest,
         User,
         UserDevice,

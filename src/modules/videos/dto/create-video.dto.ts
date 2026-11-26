@@ -47,4 +47,10 @@ export class CreateVideoDto {
     @IsNotEmpty()
     @MaxLength(100)
     category!: string;
+
+    // Optional counselling type (e.g. 'All India Quota', 'State Quota', 'Deemed / Central', 'Management')
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    counsellingType?: string;
 }
