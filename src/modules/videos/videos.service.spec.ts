@@ -37,23 +37,23 @@ describe('VideosService', () => {
                 },
                 {
                     provide: CoursesService,
-                    useValue: { findOrCreate: vi.fn() },
+                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'UG', isActive: true }]) },
                 },
                 {
                     provide: LanguagesService,
-                    useValue: { findOrCreate: vi.fn() },
+                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'Hindi', isActive: true }]) },
                 },
                 {
                     provide: SessionsService,
-                    useValue: { findOrCreate: vi.fn() },
+                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: '2025-26', isActive: true }]) },
                 },
                 {
                     provide: CategoriesService,
-                    useValue: { findOrCreate: vi.fn() },
+                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'Cutoff', slug: 'cutoff', isActive: true }]) },
                 },
                 {
                     provide: CounsellingTypesService,
-                    useValue: { findOrCreate: vi.fn() },
+                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'AIQ', slug: 'aiq', isActive: true }]) },
                 },
                 {
                     provide: StorageService,
@@ -70,5 +70,16 @@ describe('VideosService', () => {
 
     it('should be defined', () => {
         expect(service).toBeDefined();
+    });
+
+    it('should return filter options', async () => {
+        const filters = await service.getFilterOptions();
+        expect(filters).toEqual({
+            courses: ['UG'],
+            sessions: ['2025-26'],
+            categories: [{ name: 'Cutoff', slug: 'cutoff' }],
+            languages: ['Hindi'],
+            counsellingTypes: [{ name: 'AIQ', slug: 'aiq' }],
+        });
     });
 });

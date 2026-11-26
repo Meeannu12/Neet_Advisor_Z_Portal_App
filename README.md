@@ -255,6 +255,7 @@ npm run start:prod
 | `POST` | `/videos/upload-url` | Admin | Generates Cloudflare R2 Presigned PUT upload URL for direct video/thumbnail upload. |
 | `POST` | `/videos` | Admin | Registers newly uploaded video metadata with relational lookup resolution. |
 | `GET` | `/videos` | Authenticated | Paginated & filtered catalog. Course is automatically scoped by user's assigned course (UG/PG) from token. Optional filters: `session`, `category`, `language`, `counsellingType`, `isPremium`, `search`. |
+| `GET` | `/videos/filters` | Authenticated | Retrieves all available filter options (courses, sessions, categories, languages, counsellingTypes) for frontend filter dropdowns and chips. |
 | `GET` | `/videos/:id` | Authenticated | Retrieves single video details with streaming and thumbnail URLs. |
 | `DELETE`| `/videos/:id` | Admin | Deletes video record from database and purges files from Cloudflare R2 bucket. |
 
@@ -275,6 +276,23 @@ npm run start:prod
   "counsellingType": "All India Quota",
   "createdAt": "2026-11-26T10:00:00.000Z",
   "updatedAt": "2026-11-26T10:00:00.000Z"
+}
+```
+
+#### Sample Filter Options Response (`GET /videos/filters`):
+```json
+{
+  "courses": ["UG", "PG"],
+  "sessions": ["2025-26", "2024-25"],
+  "categories": [
+    { "name": "Cutoff Analysis", "slug": "cutoff-analysis" },
+    { "name": "College Review", "slug": "college-review" }
+  ],
+  "languages": ["Hindi", "English"],
+  "counsellingTypes": [
+    { "name": "All India Quota", "slug": "all-india-quota" },
+    { "name": "State Quota", "slug": "state-quota" }
+  ]
 }
 ```
 

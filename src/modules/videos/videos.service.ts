@@ -34,6 +34,14 @@ export interface VideoResponse {
     updatedAt: Date;
 }
 
+export interface VideoFilterOptions {
+    courses: string[];
+    sessions: string[];
+    categories: { name: string; slug: string }[];
+    languages: string[];
+    counsellingTypes: { name: string; slug: string }[];
+}
+
 @Injectable()
 export class VideosService {
     constructor(
@@ -224,6 +232,27 @@ export class VideosService {
             page: safePage,
             limit: safeLimit,
             totalPages: Math.ceil(total / safeLimit),
+        };
+    }
+
+    /**
+     * Retrieves all available filter options across lookup tables
+     */
+    async getFilterOptions(): Promise<VideoFilterOptions> {
+        const [courses, sessions, categories, languages, counsellingTypes] = await Promise.all([
+            this.coursesService.findAll(),
+            this.sessionsService.findAll(),
+            this.categoriesService.findAll(),
+            this.languagesService.findAll(),
+            this.counsellingTypesService.findAll(),
+        ]);
+
+        return {
+            courses: courses.filter((c) => c.isActive).map((c) => c.name),
+            sessions: sessions.map((s) => s.name),
+            categories: categories.map((c) => ({ name: c.name, slug: c.slug })),
+            languages: languages.map((l) => l.name),
+            counsellingTypes: counsellingTypes.map((ct) => ({ name: ct.name, slug: ct.slug })),
         };
     }
 

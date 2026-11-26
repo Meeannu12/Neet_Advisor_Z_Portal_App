@@ -18,6 +18,7 @@ describe('VideosController', () => {
                         getUploadUrl: vi.fn(),
                         create: vi.fn(),
                         findAll: vi.fn(),
+                        getFilterOptions: vi.fn(),
                         findOne: vi.fn(),
                         remove: vi.fn(),
                     },

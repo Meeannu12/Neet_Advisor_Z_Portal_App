@@ -79,6 +79,7 @@ export class CoursesService {
 
     async findAll(): Promise<Course[]> {
         return this.courseRepository.find({
+            where: { isActive: true },
             order: { name: 'ASC' },
         });
     }

@@ -67,6 +67,15 @@ export class VideosController {
     }
 
     /**
+     * Authenticated: Get available filter options (sessions, categories, languages, counsellingTypes, courses)
+     */
+    @Get('filters')
+    @UseGuards(JwtAuthGuard)
+    getFilters() {
+        return this.videosService.getFilterOptions();
+    }
+
+    /**
      * Authenticated: Get single video stream details
      */
     @Get(':id')
