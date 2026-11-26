@@ -1,20 +1,7 @@
 import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
-export class QueryVideosDto {
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    page?: number = 1;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    @Max(100)
-    limit?: number = 20;
-
+export class BaseVideoQueryDto {
     // Optional admin override for course (regular users automatically filtered by their course from token)
     @IsOptional()
     @IsString()
@@ -49,4 +36,29 @@ export class QueryVideosDto {
     @IsOptional()
     @IsString()
     search?: string;
+}
+
+export class QueryVideosDto extends BaseVideoQueryDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    page?: number = 1;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    limit?: number = 20;
+}
+
+export class QueryVideoSectionsDto extends BaseVideoQueryDto {
+    // Maximum number of videos returned per section (Latest and each category)
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @Max(50)
+    limit?: number = 10;
 }

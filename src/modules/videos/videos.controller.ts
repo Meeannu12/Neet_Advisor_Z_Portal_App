@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { VideosService } from './videos.service.js';
 import { CreateVideoDto } from './dto/create-video.dto.js';
-import { QueryVideosDto } from './dto/query-videos.dto.js';
+import { QueryVideosDto, QueryVideoSectionsDto } from './dto/query-videos.dto.js';
 import { UploadUrlDto } from './dto/upload-url.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -73,6 +73,18 @@ export class VideosController {
     @UseGuards(JwtAuthGuard)
     getFilters() {
         return this.videosService.getFilterOptions();
+    }
+
+    /**
+     * Authenticated: Get videos grouped by "Latest" and active categories for sectioned/carousel views.
+     */
+    @Get('sections')
+    @UseGuards(JwtAuthGuard)
+    findSections(
+        @Req() req: AuthenticatedRequest,
+        @Query() query: QueryVideoSectionsDto,
+    ) {
+        return this.videosService.findSections(query, req.user?.sub, req.user?.role);
     }
 
     /**

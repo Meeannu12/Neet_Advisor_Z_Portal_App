@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 import { Video } from './entities/video.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { CreateVideoDto } from './dto/create-video.dto.js';
-import { QueryVideosDto } from './dto/query-videos.dto.js';
+import { BaseVideoQueryDto, QueryVideosDto, QueryVideoSectionsDto } from './dto/query-videos.dto.js';
 import { UploadUrlDto } from './dto/upload-url.dto.js';
 import { UserRole } from '../../common/constants/roles.constant.js';
 
@@ -42,6 +42,25 @@ export interface VideoFilterOptions {
     counsellingTypes: { name: string; slug: string }[];
 }
 
+export interface VideoSectionItem {
+    id: string;
+    title: string;
+    isPremium: boolean;
+    thumbnailUrl: string;
+    duration: number;
+    durationFormatted: string;
+    course: string;
+    language: string;
+    session: string;
+    category: string;
+    counsellingType: string | null;
+    createdAt: Date;
+}
+
+export interface VideoSectionsResponse {
+    data: Record<string, VideoSectionItem[]>;
+}
+
 @Injectable()
 export class VideosService {
     constructor(
@@ -56,6 +75,19 @@ export class VideosService {
         private readonly counsellingTypesService: CounsellingTypesService,
         private readonly storageService: StorageService,
     ) { }
+
+    /**
+     * Formats duration in seconds into HH:MM:SS string
+     */
+    private formatDuration(totalSeconds: number): string {
+        const safeSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+        const hours = Math.floor(safeSeconds / 3600);
+        const minutes = Math.floor((safeSeconds % 3600) / 60);
+        const seconds = safeSeconds % 60;
+        return [hours, minutes, seconds]
+            .map((unit) => String(unit).padStart(2, '0'))
+            .join(':');
+    }
 
     /**
      * Formats video entity into clean flat JSON without foreign keys or nested objects
@@ -77,6 +109,110 @@ export class VideosService {
             createdAt: video.createdAt,
             updatedAt: video.updatedAt,
         };
+    }
+
+    /**
+     * Formats video entity into lightweight card item for sectioned/carousel views
+     */
+    private formatVideoSectionItem(video: Video): VideoSectionItem {
+        return {
+            id: video.id,
+            title: video.title,
+            isPremium: video.isPremium,
+            thumbnailUrl: video.thumbnailUrl,
+            duration: video.duration,
+            durationFormatted: this.formatDuration(video.duration),
+            course: video.course?.name || '',
+            language: video.language?.name || '',
+            session: video.session?.name || '',
+            category: video.category?.name || '',
+            counsellingType: video.counsellingType?.name || null,
+            createdAt: video.createdAt,
+        };
+    }
+
+    /**
+     * Resolves course scoping: regular users are locked to their assigned course; admins can pass optional ?course=
+     */
+    private async resolveScopedCourse(
+        queryCourse?: string,
+        userId?: string,
+        userRole?: string,
+    ): Promise<string | undefined> {
+        if (userId && userRole !== UserRole.ADMIN) {
+            const user = await this.userRepository.findOne({
+                where: { id: userId },
+                relations: { course: true },
+            });
+            return user?.course?.name?.trim() || undefined;
+        }
+
+        return queryCourse?.trim() || undefined;
+    }
+
+    /**
+     * Creates base query builder with optional relation selects
+     */
+    private createBaseVideoQueryBuilder(selectRelations: boolean): SelectQueryBuilder<Video> {
+        const qb = this.videoRepository.createQueryBuilder('video');
+        const joinFn = selectRelations ? 'leftJoinAndSelect' : 'leftJoin';
+
+        return qb[joinFn]('video.course', 'course')
+            [joinFn]('video.language', 'language')
+            [joinFn]('video.session', 'session')
+            [joinFn]('video.category', 'category')
+            [joinFn]('video.counsellingType', 'counsellingType');
+    }
+
+    /**
+     * Applies common course and catalog filters to a video query builder
+     */
+    private applyVideoFilters(
+        qb: SelectQueryBuilder<Video>,
+        query: BaseVideoQueryDto,
+        scopedCourse?: string,
+    ): SelectQueryBuilder<Video> {
+        if (scopedCourse) {
+            qb.andWhere('UPPER(course.name) = UPPER(:scopedCourse)', {
+                scopedCourse,
+            });
+        }
+
+        if (query.session && query.session.trim()) {
+            qb.andWhere('LOWER(session.name) = LOWER(:session)', {
+                session: query.session.trim(),
+            });
+        }
+
+        if (query.category && query.category.trim()) {
+            qb.andWhere('(category.slug = :category OR LOWER(category.name) = LOWER(:category))', {
+                category: query.category.trim(),
+            });
+        }
+
+        if (query.language && query.language.trim()) {
+            qb.andWhere('LOWER(language.name) = LOWER(:language)', {
+                language: query.language.trim(),
+            });
+        }
+
+        if (query.counsellingType && query.counsellingType.trim()) {
+            qb.andWhere('(counsellingType.slug = :counsellingType OR LOWER(counsellingType.name) = LOWER(:counsellingType))', {
+                counsellingType: query.counsellingType.trim(),
+            });
+        }
+
+        if (typeof query.isPremium === 'boolean') {
+            qb.andWhere('video.isPremium = :isPremium', { isPremium: query.isPremium });
+        }
+
+        if (query.search && query.search.trim()) {
+            qb.andWhere('(video.title ILIKE :search OR video.description ILIKE :search)', {
+                search: `%${query.search.trim()}%`,
+            });
+        }
+
+        return qb;
     }
 
     /**
@@ -157,70 +293,14 @@ export class VideosService {
         const safeLimit = Math.min(Math.max(Number(query.limit) || 20, 1), 100);
         const safePage = Math.max(Number(query.page) || 1, 1);
         const skip = (safePage - 1) * safeLimit;
+        const scopedCourse = await this.resolveScopedCourse(query.course, userId, userRole);
 
-        const qb: SelectQueryBuilder<Video> = this.videoRepository
-            .createQueryBuilder('video')
-            .leftJoinAndSelect('video.course', 'course')
-            .leftJoinAndSelect('video.language', 'language')
-            .leftJoinAndSelect('video.session', 'session')
-            .leftJoinAndSelect('video.category', 'category')
-            .leftJoinAndSelect('video.counsellingType', 'counsellingType');
-
-        // Course filter: Regular users are automatically scoped to their assigned course (UG/PG)
-        if (userId && userRole !== UserRole.ADMIN) {
-            const user = await this.userRepository.findOne({
-                where: { id: userId },
-                relations: { course: true },
-            });
-
-            if (user?.course?.name) {
-                qb.andWhere('UPPER(course.name) = UPPER(:userCourse)', {
-                    userCourse: user.course.name.trim(),
-                });
-            }
-        } else if (query.course && query.course.trim()) {
-            // Admin can optionally filter by course via query param
-            qb.andWhere('UPPER(course.name) = UPPER(:course)', {
-                course: query.course.trim(),
-            });
-        }
-
-        // Optional query filters (applied only if provided)
-        if (query.session && query.session.trim()) {
-            qb.andWhere('LOWER(session.name) = LOWER(:session)', {
-                session: query.session.trim(),
-            });
-        }
-
-        if (query.category && query.category.trim()) {
-            qb.andWhere('(category.slug = :category OR LOWER(category.name) = LOWER(:category))', {
-                category: query.category.trim(),
-            });
-        }
-
-        if (query.language && query.language.trim()) {
-            qb.andWhere('LOWER(language.name) = LOWER(:language)', {
-                language: query.language.trim(),
-            });
-        }
-
-        if (query.counsellingType && query.counsellingType.trim()) {
-            qb.andWhere('(counsellingType.slug = :counsellingType OR LOWER(counsellingType.name) = LOWER(:counsellingType))', {
-                counsellingType: query.counsellingType.trim(),
-            });
-        }
-
-        if (typeof query.isPremium === 'boolean') {
-            qb.andWhere('video.isPremium = :isPremium', { isPremium: query.isPremium });
-        }
-
-        if (query.search && query.search.trim()) {
-            qb.andWhere('(video.title ILIKE :search OR video.description ILIKE :search)', {
-                search: `%${query.search.trim()}%`,
-            });
-        }
-
-        qb.orderBy('video.createdAt', 'DESC')
+        const qb = this.applyVideoFilters(
+            this.createBaseVideoQueryBuilder(true),
+            query,
+            scopedCourse,
+        )
+            .orderBy('video.createdAt', 'DESC')
             .skip(skip)
             .take(safeLimit);
 
@@ -233,6 +313,77 @@ export class VideosService {
             limit: safeLimit,
             totalPages: Math.ceil(total / safeLimit),
         };
+    }
+
+    /**
+     * Lists videos grouped under "Latest" and each active category (capped per section)
+     */
+    async findSections(
+        query: QueryVideoSectionsDto,
+        userId?: string,
+        userRole?: string,
+    ): Promise<VideoSectionsResponse> {
+        const safeLimit = Math.min(Math.max(Number(query.limit) || 10, 1), 50);
+        const scopedCourse = await this.resolveScopedCourse(query.course, userId, userRole);
+
+        // 1. Latest videos across all matching categories
+        const latestVideos = await this.applyVideoFilters(
+            this.createBaseVideoQueryBuilder(true),
+            query,
+            scopedCourse,
+        )
+            .orderBy('video.createdAt', 'DESC')
+            .take(safeLimit)
+            .getMany();
+
+        // 2. Top N videos per active category using SQL window function
+        const rankedQb = this.applyVideoFilters(
+            this.createBaseVideoQueryBuilder(false),
+            query,
+            scopedCourse,
+        )
+            .andWhere('category.isActive = :isActive', { isActive: true })
+            .select('video.id', 'id')
+            .addSelect(
+                'ROW_NUMBER() OVER (PARTITION BY video."categoryId" ORDER BY video."createdAt" DESC)',
+                'rn',
+            );
+
+        const [rankedSql, rankedParams] = rankedQb.getQueryAndParameters();
+        const rankedRows: { id: string }[] = await this.videoRepository.query(
+            `SELECT id FROM (${rankedSql}) ranked WHERE ranked.rn <= $${rankedParams.length + 1}`,
+            [...rankedParams, safeLimit],
+        );
+
+        const categorizedIds = rankedRows.map((row) => row.id);
+        const categorizedVideos = categorizedIds.length
+            ? await this.videoRepository.find({
+                  where: { id: In(categorizedIds) },
+                  relations: {
+                      course: true,
+                      language: true,
+                      session: true,
+                      category: true,
+                      counsellingType: true,
+                  },
+                  order: { createdAt: 'DESC' },
+              })
+            : [];
+
+        const data: Record<string, VideoSectionItem[]> = {
+            Latest: latestVideos.map((v) => this.formatVideoSectionItem(v)),
+        };
+
+        for (const video of categorizedVideos) {
+            const categoryName = video.category?.name;
+            if (!categoryName) continue;
+            if (!data[categoryName]) {
+                data[categoryName] = [];
+            }
+            data[categoryName].push(this.formatVideoSectionItem(video));
+        }
+
+        return { data };
     }
 
     /**
