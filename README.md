@@ -226,6 +226,8 @@ npm run start:prod
 
 ## 📡 API Reference
 
+> **Base Prefix:** All API routes are served under `/api/v1` (for example, `POST /api/v1/auth/send-otp`, `GET /api/v1/videos`, `GET /api/v1/choice-lists`). Local TypeORM AdminJS UI (when enabled) remains at `/admin`.
+
 ### 🔐 Authentication (`/auth`)
 
 | Method | Endpoint | Access | Description |

@@ -5,6 +5,9 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Prefix all REST API routes with /api/v1
+  app.setGlobalPrefix('api/v1');
+
   // Enable CORS to allow mobile and web clients to connect seamlessly
   app.enableCors({
     origin: process.env.CORS_ORIGIN || '*',
