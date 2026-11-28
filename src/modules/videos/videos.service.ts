@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -229,22 +229,28 @@ export class VideosService {
     }
 
     /**
-     * Creates a new video record with dynamic relational resolution
+     * Creates a new video record after validating that all required reference entities exist
      */
     async create(dto: CreateVideoDto): Promise<VideoResponse> {
-        // Dynamic relational resolution: find existing or automatically create missing lookup records
-        const [course, language, session, category] = await Promise.all([
-            this.coursesService.findOrCreate(dto.course),
-            this.languagesService.findOrCreate(dto.language),
-            this.sessionsService.findOrCreate(dto.session),
-            this.categoriesService.findOrCreate(dto.category),
+        const results = await Promise.allSettled([
+            this.coursesService.findExistingOrThrow(dto.course),
+            this.languagesService.findExistingOrThrow(dto.language),
+            this.sessionsService.findExistingOrThrow(dto.session),
+            this.categoriesService.findExistingOrThrow(dto.category),
+            this.counsellingTypesService.findExistingOrThrow(dto.counsellingType),
         ]);
 
-        let counsellingTypeId: string | null = null;
-        if (dto.counsellingType && dto.counsellingType.trim()) {
-            const counsellingType = await this.counsellingTypesService.findOrCreate(dto.counsellingType);
-            counsellingTypeId = counsellingType.id;
+        const errors = results
+            .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+            .map((r) => (r.reason instanceof Error ? r.reason.message : 'Invalid reference field'));
+
+        if (errors.length > 0) {
+            throw new BadRequestException(errors.length === 1 ? errors[0] : errors.join('; '));
         }
+
+        const [course, language, session, category, counsellingType] = results.map(
+            (r) => (r as PromiseFulfilledResult<{ id: string }>).value,
+        );
 
         const video = this.videoRepository.create({
             title: dto.title.trim(),
@@ -257,7 +263,7 @@ export class VideosService {
             languageId: language.id,
             sessionId: session.id,
             categoryId: category.id,
-            counsellingTypeId,
+            counsellingTypeId: counsellingType.id,
         });
 
         const saved = await this.videoRepository.save(video);

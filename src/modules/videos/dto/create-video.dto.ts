@@ -1,7 +1,11 @@
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+const trimValue = ({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value;
 
 export class CreateVideoDto {
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     @MaxLength(255)
@@ -15,10 +19,12 @@ export class CreateVideoDto {
     @IsBoolean()
     isPremium?: boolean = false;
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     thumbnailUrl!: string;
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     videoUrl!: string;
@@ -28,29 +34,33 @@ export class CreateVideoDto {
     @Min(0)
     duration!: number; // Duration in seconds
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     @MaxLength(100)
     course!: string;
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     @MaxLength(50)
     language!: string;
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     @MaxLength(50)
     session!: string;
 
+    @Transform(trimValue)
     @IsString()
     @IsNotEmpty()
     @MaxLength(100)
     category!: string;
 
-    // Optional counselling type (e.g. 'All India Quota', 'State Quota', 'Deemed / Central', 'Management')
-    @IsOptional()
+    @Transform(trimValue)
     @IsString()
+    @IsNotEmpty()
     @MaxLength(100)
-    counsellingType?: string;
+    counsellingType!: string;
 }

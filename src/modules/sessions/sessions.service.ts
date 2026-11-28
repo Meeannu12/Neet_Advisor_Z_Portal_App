@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Session } from './entities/session.entity.js';
+import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class SessionsService {
@@ -32,5 +33,9 @@ export class SessionsService {
             where: { isActive: true },
             order: { name: 'DESC' },
         });
+    }
+
+    async findExistingOrThrow(name: string): Promise<Session> {
+        return findActiveLookupOrThrow(this.sessionRepository, name, 'Session');
     }
 }

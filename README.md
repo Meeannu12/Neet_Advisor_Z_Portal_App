@@ -337,6 +337,29 @@ npm run start:prod
 }
 ```
 
+### 🏥 Colleges, Closing Ranks & Choice Lists (`/colleges`, `/cutoffs`, `/choice-lists`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/colleges` | Admin | Create or update a college profile. |
+| `POST` | `/colleges/import` | Admin | Bulk import colleges, seat quotas, fees, bonds, and closing ranks via `.csv` / `.xlsx`. |
+| `POST` | `/colleges/:id/seats` | Admin | Add or update a course/quota seat entry for a college. |
+| `POST` | `/colleges/seats/:seatId/cutoffs` | Admin | Upsert round/category closing rank for a college seat. |
+| `GET` | `/colleges` | Authenticated | Search/filter colleges & seats (automatically course-scoped by user token). |
+| `GET` | `/colleges/:id` | Authenticated | Retrieve full college profile with seat quotas and historical closing ranks. |
+| `GET` | `/cutoffs` | Authenticated | Explore historical closing ranks and run rank scan (`userRank`). |
+| `GET` | `/choice-lists` | Authenticated | List all saved choice lists for the authenticated user (synced across all devices). |
+| `POST` | `/choice-lists` | Authenticated | Create & save a choice list (with criteria snapshot and optional initial `items`). |
+| `POST` | `/choice-lists/auto-generate` | Authenticated | Auto-generate a `DREAM → REALISTIC → SAFE` choice list from rank, category, domicile, and budget. |
+| `POST` | `/choice-lists/admin/assign` | Admin | Create and assign a reviewed choice list directly to a user. |
+| `GET` | `/choice-lists/:id` | Authenticated | Fetch saved choice list details with ordered preferences, fees, cutoffs, and `version`. |
+| `PUT` | `/choice-lists/:id/save` | Authenticated | Save/sync full choice list header and ordered items atomically with optimistic `version` check. |
+| `POST` | `/choice-lists/:id/items` | Authenticated | Append new college seats to an existing choice list. |
+| `PATCH` | `/choice-lists/:id/reorder` | Authenticated | Update drag-and-drop `priorityOrder` transactionally. |
+| `DELETE` | `/choice-lists/:id/items/:itemId` | Authenticated | Remove a choice item and re-sequence remaining priorities. |
+| `POST` | `/choice-lists/:id/duplicate` | Authenticated | Clone a choice list (e.g., Round 1 → Round 2). |
+| `GET` | `/choice-lists/:id/export` | Authenticated | Download ordered choice list as an `.xlsx` spreadsheet. |
+
 ---
 
 ## 📥 Bulk User Import Specification

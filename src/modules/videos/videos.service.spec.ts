@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 import { VideosService } from './videos.service.js';
+import { CreateVideoDto } from './dto/create-video.dto.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Video } from './entities/video.entity.js';
 import { User } from '../users/entities/user.entity.js';
@@ -27,10 +31,31 @@ describe('VideosService', () => {
         findOne: ReturnType<typeof vi.fn>;
     };
 
+    let coursesServiceMock: {
+        findExistingOrThrow: ReturnType<typeof vi.fn>;
+        findAll: ReturnType<typeof vi.fn>;
+    };
+    let languagesServiceMock: {
+        findExistingOrThrow: ReturnType<typeof vi.fn>;
+        findAll: ReturnType<typeof vi.fn>;
+    };
+    let sessionsServiceMock: {
+        findExistingOrThrow: ReturnType<typeof vi.fn>;
+        findAll: ReturnType<typeof vi.fn>;
+    };
+    let categoriesServiceMock: {
+        findExistingOrThrow: ReturnType<typeof vi.fn>;
+        findAll: ReturnType<typeof vi.fn>;
+    };
+    let counsellingTypesServiceMock: {
+        findExistingOrThrow: ReturnType<typeof vi.fn>;
+        findAll: ReturnType<typeof vi.fn>;
+    };
+
     beforeEach(async () => {
         videoRepositoryMock = {
-            create: vi.fn(),
-            save: vi.fn(),
+            create: vi.fn((data) => data),
+            save: vi.fn(async (data) => ({ id: 'vid-new', ...data })),
             find: vi.fn(),
             findOne: vi.fn(),
             findOneOrFail: vi.fn(),
@@ -40,6 +65,26 @@ describe('VideosService', () => {
         };
         userRepositoryMock = {
             findOne: vi.fn(),
+        };
+        coursesServiceMock = {
+            findExistingOrThrow: vi.fn().mockResolvedValue({ id: 'course-1', name: 'UG' }),
+            findAll: vi.fn().mockResolvedValue([{ name: 'UG', isActive: true }]),
+        };
+        languagesServiceMock = {
+            findExistingOrThrow: vi.fn().mockResolvedValue({ id: 'lang-1', name: 'Hindi' }),
+            findAll: vi.fn().mockResolvedValue([{ name: 'Hindi', isActive: true }]),
+        };
+        sessionsServiceMock = {
+            findExistingOrThrow: vi.fn().mockResolvedValue({ id: 'session-1', name: '2025-26' }),
+            findAll: vi.fn().mockResolvedValue([{ name: '2025-26', isActive: true }]),
+        };
+        categoriesServiceMock = {
+            findExistingOrThrow: vi.fn().mockResolvedValue({ id: 'cat-1', name: 'Cutoff' }),
+            findAll: vi.fn().mockResolvedValue([{ name: 'Cutoff', slug: 'cutoff', isActive: true }]),
+        };
+        counsellingTypesServiceMock = {
+            findExistingOrThrow: vi.fn().mockResolvedValue({ id: 'ct-1', name: 'AIQ' }),
+            findAll: vi.fn().mockResolvedValue([{ name: 'AIQ', slug: 'aiq', isActive: true }]),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -55,23 +100,23 @@ describe('VideosService', () => {
                 },
                 {
                     provide: CoursesService,
-                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'UG', isActive: true }]) },
+                    useValue: coursesServiceMock,
                 },
                 {
                     provide: LanguagesService,
-                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'Hindi', isActive: true }]) },
+                    useValue: languagesServiceMock,
                 },
                 {
                     provide: SessionsService,
-                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: '2025-26', isActive: true }]) },
+                    useValue: sessionsServiceMock,
                 },
                 {
                     provide: CategoriesService,
-                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'Cutoff', slug: 'cutoff', isActive: true }]) },
+                    useValue: categoriesServiceMock,
                 },
                 {
                     provide: CounsellingTypesService,
-                    useValue: { findOrCreate: vi.fn(), findAll: vi.fn().mockResolvedValue([{ name: 'AIQ', slug: 'aiq', isActive: true }]) },
+                    useValue: counsellingTypesServiceMock,
                 },
                 {
                     provide: StorageService,
@@ -224,5 +269,80 @@ describe('VideosService', () => {
 
         expect(videoRepositoryMock.find).not.toHaveBeenCalled();
         expect(result).toEqual({ data: { Latest: [] } });
+    });
+
+    it('requires all 5 reference fields on CreateVideoDto', () => {
+        const dtoMissingCounselling = plainToInstance(CreateVideoDto, {
+            title: 'Test Video',
+            thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+            videoUrl: 'https://cdn.example.com/vid.mp4',
+            duration: 120,
+            course: 'UG',
+            language: 'Hindi',
+            session: '2025-26',
+            category: 'Cutoff',
+        });
+
+        const errors = validateSync(dtoMissingCounselling);
+        expect(errors.some((e) => e.property === 'counsellingType')).toBe(true);
+    });
+
+    it('creates video when all 5 reference entities exist', async () => {
+        const now = new Date();
+        videoRepositoryMock.findOneOrFail.mockResolvedValueOnce({
+            id: 'vid-new',
+            title: 'Test Video',
+            description: null,
+            isPremium: false,
+            thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+            videoUrl: 'https://cdn.example.com/vid.mp4',
+            duration: 120,
+            course: { name: 'UG' },
+            language: { name: 'Hindi' },
+            session: { name: '2025-26' },
+            category: { name: 'Cutoff' },
+            counsellingType: { name: 'AIQ' },
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        const created = await service.create({
+            title: 'Test Video',
+            thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+            videoUrl: 'https://cdn.example.com/vid.mp4',
+            duration: 120,
+            course: 'UG',
+            language: 'Hindi',
+            session: '2025-26',
+            category: 'Cutoff',
+            counsellingType: 'AIQ',
+        });
+
+        expect(coursesServiceMock.findExistingOrThrow).toHaveBeenCalledWith('UG');
+        expect(counsellingTypesServiceMock.findExistingOrThrow).toHaveBeenCalledWith('AIQ');
+        expect(created.counsellingType).toBe('AIQ');
+    });
+
+    it('throws BadRequestException when any reference field does not exist', async () => {
+        coursesServiceMock.findExistingOrThrow.mockRejectedValueOnce(
+            new BadRequestException('Course "INVALID" does not exist or is inactive'),
+        );
+        counsellingTypesServiceMock.findExistingOrThrow.mockRejectedValueOnce(
+            new BadRequestException('CounsellingType "UNKNOWN" does not exist or is inactive'),
+        );
+
+        await expect(
+            service.create({
+                title: 'Test Video',
+                thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+                videoUrl: 'https://cdn.example.com/vid.mp4',
+                duration: 120,
+                course: 'INVALID',
+                language: 'Hindi',
+                session: '2025-26',
+                category: 'Cutoff',
+                counsellingType: 'UNKNOWN',
+            }),
+        ).rejects.toThrow('Course "INVALID" does not exist or is inactive; CounsellingType "UNKNOWN" does not exist or is inactive');
     });
 });

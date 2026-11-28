@@ -10,6 +10,11 @@ import { ContactRequest } from './modules/contact-requests/entities/contact-requ
 import { User } from './modules/users/entities/user.entity.js';
 import { UserDevice } from './modules/user-devices/entities/user-device.entity.js';
 import { Video } from './modules/videos/entities/video.entity.js';
+import { College } from './modules/colleges/entities/college.entity.js';
+import { CollegeSeat } from './modules/colleges/entities/college-seat.entity.js';
+import { ClosingRank } from './modules/colleges/entities/closing-rank.entity.js';
+import { ChoiceList } from './modules/choice-lists/entities/choice-list.entity.js';
+import { ChoiceListItem } from './modules/choice-lists/entities/choice-list-item.entity.js';
 
 export default new DataSource({
     type: 'postgres',
@@ -25,6 +30,11 @@ export default new DataSource({
         User,
         UserDevice,
         Video,
+        College,
+        CollegeSeat,
+        ClosingRank,
+        ChoiceList,
+        ChoiceListItem,
     ],
 
     migrations: ['src/database/migrations/*.ts'],

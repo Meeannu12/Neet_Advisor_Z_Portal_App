@@ -13,6 +13,8 @@ import { SessionsModule } from './modules/sessions/sessions.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CounsellingTypesModule } from './modules/counselling-types/counselling-types.module.js';
 import { VideosModule } from './modules/videos/videos.module.js';
+import { CollegesModule } from './modules/colleges/colleges.module.js';
+import { ChoiceListsModule } from './modules/choice-lists/choice-lists.module.js';
 import { AdminUiModule } from './modules/admin-ui/admin-ui.module.js';
 
 @Module({
@@ -46,6 +48,8 @@ import { AdminUiModule } from './modules/admin-ui/admin-ui.module.js';
     CategoriesModule,
     CounsellingTypesModule,
     VideosModule,
+    CollegesModule,
+    ChoiceListsModule,
     AdminUiModule,
     RedisModule,
     AuthModule,

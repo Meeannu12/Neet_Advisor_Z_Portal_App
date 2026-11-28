@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Course } from './entities/course.entity.js';
+import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class CoursesService {
@@ -88,5 +89,9 @@ export class CoursesService {
         return this.courseRepository.findOne({
             where: { name: name.trim().toUpperCase() },
         });
+    }
+
+    async findExistingOrThrow(name: string): Promise<Course> {
+        return findActiveLookupOrThrow(this.courseRepository, name, 'Course');
     }
 }
