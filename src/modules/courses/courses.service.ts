@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Course } from './entities/course.entity.js';
-import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
+import {
+    createLookupOrThrow,
+    findActiveLookupOrThrow,
+} from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class CoursesService {
@@ -76,6 +79,13 @@ export class CoursesService {
         }
 
         return courseMap;
+    }
+
+    async create(name: string, description?: string): Promise<Course> {
+        return createLookupOrThrow(this.courseRepository, name, 'Course', {
+            uppercaseName: true,
+            extraFields: { description: description?.trim() || null },
+        });
     }
 
     async findAll(): Promise<Course[]> {

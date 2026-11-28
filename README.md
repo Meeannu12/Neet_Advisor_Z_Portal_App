@@ -362,6 +362,21 @@ npm run start:prod
 | `POST` | `/choice-lists/:id/duplicate` | Authenticated | Clone a choice list (e.g., Round 1 → Round 2). |
 | `GET` | `/choice-lists/:id/export` | Authenticated | Download ordered choice list as an `.xlsx` spreadsheet. |
 
+### 🗂️ Admin Catalog Lookups (`/courses`, `/languages`, `/sessions`, `/categories`, `/counselling-types`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/courses` | Admin | List active courses (`UG`, `PG`, etc.). |
+| `POST` | `/courses` | Admin | Create a new course (`{ "name": "MDS", "description": "..." }`). |
+| `GET` | `/languages` | Admin | List active languages (`Hindi`, `English`, etc.). |
+| `POST` | `/languages` | Admin | Create a new language (`{ "name": "Tamil" }`). |
+| `GET` | `/sessions` | Admin | List active academic sessions (`2025-26`, etc.). |
+| `POST` | `/sessions` | Admin | Create a new session (`{ "name": "2026-27" }`). |
+| `GET` | `/categories` | Admin | List active video categories. |
+| `POST` | `/categories` | Admin | Create a new video category (`{ "name": "Registration Demos" }`). |
+| `GET` | `/counselling-types` | Admin | List active counselling types (`All India Quota`, `State Quota`, etc.). |
+| `POST` | `/counselling-types` | Admin | Create a new counselling type (`{ "name": "Central Quota" }`). |
+
 ---
 
 ## 📥 Bulk User Import Specification

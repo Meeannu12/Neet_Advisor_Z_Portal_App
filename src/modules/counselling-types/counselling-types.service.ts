@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CounsellingType } from './entities/counselling-type.entity.js';
-import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
+import {
+    createLookupOrThrow,
+    findActiveLookupOrThrow,
+} from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class CounsellingTypesService {
@@ -38,6 +41,15 @@ export class CounsellingTypesService {
         }
 
         return counsellingType;
+    }
+
+    async create(name: string): Promise<CounsellingType> {
+        return createLookupOrThrow(
+            this.counsellingTypeRepository,
+            name,
+            'CounsellingType',
+            { withSlug: true },
+        );
     }
 
     async findAll(): Promise<CounsellingType[]> {

@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity.js';
-import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
+import {
+    createLookupOrThrow,
+    findActiveLookupOrThrow,
+} from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class CategoriesService {
@@ -38,6 +41,12 @@ export class CategoriesService {
         }
 
         return category;
+    }
+
+    async create(name: string): Promise<Category> {
+        return createLookupOrThrow(this.categoryRepository, name, 'Category', {
+            withSlug: true,
+        });
     }
 
     async findAll(): Promise<Category[]> {

@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Language } from './entities/language.entity.js';
-import { findActiveLookupOrThrow } from '../../common/utils/lookup-entity.util.js';
+import {
+    createLookupOrThrow,
+    findActiveLookupOrThrow,
+} from '../../common/utils/lookup-entity.util.js';
 
 @Injectable()
 export class LanguagesService {
@@ -26,6 +29,10 @@ export class LanguagesService {
         }
 
         return lang;
+    }
+
+    async create(name: string): Promise<Language> {
+        return createLookupOrThrow(this.languageRepository, name, 'Language');
     }
 
     async findAll(): Promise<Language[]> {
